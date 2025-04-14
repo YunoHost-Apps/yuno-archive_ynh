@@ -6,9 +6,9 @@
 #                     GLOBAL VARS                         #
 #=========================================================#
 
-declare -r CURRENT_DATE=$(date +"%y%m%d_%H%M")
+declare -r CURRENT_DATE=$(date +"%Y%m%d-%H%M%S")
 # log file for mail notification
-declare -r LOG_FILE="/tmp/${APP}_${CURRENT_DATE}.log"
+declare -r LOG_FILE=$(mktemp)
 # Global to store errors messages for mail
 ERRORS=""
 
@@ -71,12 +71,13 @@ if [ -z "$APP" ]; then
 fi
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
-echo "${now} START BACKUP ${APP}" >> "$LOG_FILE"
+echo "${now} STARTING BACKUP ${APP}" >> "$LOG_FILE"
 
 # Backup system part conf
 conf=$(sudo yunohost app setting "${APP}" conf)
 if [[ "$conf" = "1" ]]; then
-    if ! sudo yunohost backup create -n auto_conf --method "${APP}_app" --system "$(filter_hooks conf)" >> "$LOG_FILE" 2>&1; then
+    echo "--------- BACKUP CONF ---------" >> "$LOG_FILE"
+    if ! sudo yunohost backup create --name "${CURRENT_DATE}_system_conf" --method "${APP}_app" --system "$(filter_hooks conf)" >> "$LOG_FILE" 2>&1; then
         ERRORS+="\n[ERROR] The backup miserably failed to backup system configurations."
     fi
 fi
@@ -84,7 +85,8 @@ fi
 # Backup system data
 data=$(sudo yunohost app setting "${APP}" data)
 if [[ "$data" = "1" ]]; then
-    if ! sudo yunohost backup create -n auto_data --method "${APP}_app" --system "$(filter_hooks data)" >> "$LOG_FILE" 2>&1; then
+    echo "--------- BACKUP SYSTEM DATA ---------" >> "$LOG_FILE"
+    if ! sudo yunohost backup create --name "${CURRENT_DATE}_system_data" --method "${APP}_app" --system "$(filter_hooks data)" >> "$LOG_FILE" 2>&1; then
         ERRORS+="\n[ERROR] The backup miserably failed to backup system data."
     fi
 fi
@@ -104,7 +106,8 @@ for application in $(sudo ls /etc/yunohost/apps/); do
         continue
     fi
 
-    if ! sudo yunohost backup create -n "auto_$application" --method "${APP}_app" --apps "$application" | sudo tee -a "$LOG_FILE" 2>&1; then
+    echo "--------- BACKUP APP $application ---------" >> "$LOG_FILE"
+    if ! sudo yunohost backup create --name "${CURRENT_DATE}_$application" --method "${APP}_app" --apps "$application" >> "$LOG_FILE" 2>&1; then
         ERRORS+="\n[ERROR] The backup miserably failed to backup $application application."
     fi
 done
@@ -116,10 +119,11 @@ echo "${now} END BACKUP ${APP}" >> "$LOG_FILE"
 # SEND MAIL TO NOTIFY ABOUT SUCCEEDED OR FAILED OPERATIONS
 #=========================================================
 
-repository="$(sudo yunohost app setting "${APP}" repository)"
+method="$(sudo yunohost app setting "${APP}" method)"
+repository="$(sudo yunohost app setting "${APP}" "${method}_repository")"
 mailalert="$(sudo yunohost app setting "${APP}" mailalert)"
 if [[  -n "$ERRORS" && $mailalert != "never" ]]; then
-    cat <(echo -e "$ERRORS\n\n\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup ${APP} failed onto $repository" admins
+    cat <(echo -e "$ERRORS\n\n\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup ${APP} failed onto $method $repository" admins
     rm -rf "$LOG_FILE"
     exit 1
 elif [ "$mailalert" == "always" ]; then

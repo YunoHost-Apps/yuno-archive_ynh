@@ -20,7 +20,7 @@ declare -r BACKUP_SIZE="$5"
 declare -r BACKUP_DESCRIPTION="$6"
 
 # Info file name
-declare -r INFO_FILE="${BACKUP_NAME}.info.json"
+declare -r INFO_FILE="${BACKUP_TMP_DIR}/info.json"
 # App ID
 declare -r APP="__APP__"
 
@@ -47,7 +47,11 @@ fail() {
 }
 
 do_need_mount() {
-    false
+    true
+}
+
+do_mount() {
+    true
 }
 
 do_backup() {
@@ -61,17 +65,15 @@ do_backup() {
     yunohost app setting "${APP}" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
     yunohost app setting "${APP}" state -v "ongoing"
 
-    cp "${BACKUP_TMP_DIR}/${INFO_FILE}" /tmp/info.json || fail
-
     case "$METHOD" in
         local)
-            $YUNO_ARCHIVE backup local --log="$LOG" --repository="$LOCAL_REPOSITORY" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="/tmp/info.json" --keep="$KEEP" || fail
+            $YUNO_ARCHIVE backup local --log="$LOG" --repository="$LOCAL_REPOSITORY" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="${INFO_FILE}" --keep="$KEEP" || fail
             ;;
         drive)
-            $YUNO_ARCHIVE backup drive --log="$LOG" --drive="$DRIVE_REPOSITORY" --repository="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="/tmp/info.json" --keep="$KEEP"  || fail
+            $YUNO_ARCHIVE backup drive --log="$LOG" --drive="$DRIVE_REPOSITORY" --repository="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="${INFO_FILE}" --keep="$KEEP"  || fail
             ;;
         rclone)
-            $YUNO_ARCHIVE backup rclone --log="$LOG" --repository="$RCLONE_REPOSITORY" --path="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="/tmp/info.json" --keep="$KEEP"  || fail
+            $YUNO_ARCHIVE backup rclone --log="$LOG" --repository="$RCLONE_REPOSITORY" --path="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="${INFO_FILE}" --keep="$KEEP"  || fail
             ;;
         *)
             echo "Unknown method '$METHOD'" >&2
@@ -80,6 +82,7 @@ do_backup() {
     esac
     
     yunohost app setting "${APP}" state -v "successful"
+    return 0
 }
 
 #=========================================================#
