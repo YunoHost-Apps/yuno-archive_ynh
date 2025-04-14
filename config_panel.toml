@@ -1,0 +1,141 @@
+version = "1.0"
+
+[main]
+services = []
+
+    [main.state]
+    name = ""
+    visible = "false"
+
+        [main.state.state]
+        type = "string"
+
+        [main.state.last_run]
+        type = "string"
+
+    [main.general]
+        [main.general.info]
+        ask = """\
+        Backup state : {{state}}
+        Last run: {{last_run}}
+        """
+        type = "alert"
+        style = "info"
+
+        [main.general.ynh_repo]
+        ask.en = "Use Yunohost default repository"
+        ask.fr = "Utiliser le dépôt par défaut de Yunohost"
+        type = "boolean"
+        help.en = "`Yes` Backups will be stored in Yunohost's local backups directory and will be visible in the backups menu.<br>`No` You must configure the method and repository."
+        help.fr = "`Oui` Les sauvegardes seront stockées dans le répertoire des sauvegardes locales de Yunohost et seront visibles dans le menu des sauvegardes.<br>`Non` Vous devez configurer la méthode et le dépot."
+
+
+        [main.general.method]
+        ask.en = "Method"
+        ask.fr = "Méthode"
+        visible = "!ynh_repo"
+        type = "select"
+        choices.local = "Local filesystem"
+        choices.drive = "External drive"
+        choices.rclone = "Rclone"
+        help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository."
+        help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré."
+
+        [main.general.local_repository]
+        ask.en = "Local directory"
+        ask.fr = "Répertoire local"
+        visible = "!ynh_repo && method == 'local'"
+        type = "string"
+        help.en = "Enter an existing directory on server"
+        help.fr = "Saisir un répertoire existant sur le serveur"
+
+        [main.general.drive_repository]
+        ask.en = "Drive partition"
+        ask.fr = "Partition sur un disque"
+        visible = "!ynh_repo && method == 'drive'"
+        type = "string"
+        help.en = "Enter a partition on a hard drive (e.g. /dev/sdb1).\n**Do not choose a system partition!** (it will be unmounted and then mounted during the backup)\nThe archives will be stored in the **ynh_archives** subdirectory."
+        help.fr = "Saisir une partition sur un disque dur (ex : /dev/sdb1).\n**Ne pas choisir une partition du système !** (elle sera démontée puis montée durant le backup)\nLes archives seront stockées dans le sous-répertoire **ynh_archives**."
+
+        [main.general.mounted_drive]
+        ask.en  = "Mounted drive verification (You should save before)..."
+        ask.fr  = "Vérification du point de montage du lecteur (Vous devez sauvegarder avant)..."
+        visible = "!ynh_repo && method == 'drive' && drive_repository != ''"
+        type = "alert"
+        style = "info"
+
+        [main.general.rclone_repository]
+        ask.en = "Rclone repo"
+        ask.fr = "Dépôt Rclone"
+        visible = "!ynh_repo && method == 'rclone'"
+        type = "string"
+        help.en = "Enter a configured Rclone repository (e.g. pcloud-repo) without the trailing ':'.\nThe archives will be stored in the **ynh_archives** subdirectory."
+        help.fr = "Saisir le nom d'un dépôt (repo) Rclone configuré (ex: pcloud-repo) sans les ':' à la fin.\nLes archives seront stockées dans le sous-répertoire **ynh_archives**."
+
+        [main.general.rclone_version]
+        ask = "Rclone version: {{rclone_version}}"
+        visible = "!ynh_repo && method == 'rclone'"
+        type = "alert"
+        style = "info"
+
+        [main.general.on_calendar]
+        ask.en = "When and at which frequency should the backups be performed?"
+        ask.fr = "Quand et à quelle fréquence les sauvegardes doivent-elles être effectuées ?"
+        type = "string"
+        help.en = "For example: `Monthly`, `Weekly`, `Daily` (=every day at midnight), `Hourly`, `Sat *-*-1..7 18:00:00` (=the first saturday of every month at 18:00), `4:00` (=every day at 4 AM), `5,17:00` (=every day at 5 AM and 5 PM). See the [systemd OnCalendar format for full syntax doc](https://wiki.archlinux.org/index.php/Systemd/Timers#Realtime_timer)"
+        help.fr = "Par exemple: `Monthly`, `Weekly`, `Daily` (=tous les jours à minuit), `Hourly`, `Sat *-*-1..7 18:00:00` (=le 1er samedi de chaque mois à 18:00), `4:00` (=tous les jours à 4h), `5,17:00` (=tous les jours à 5h00 et 17h00). Voir [systemd OnCalendar format pour la syntaxe complète](https://wiki.archlinux.org/index.php/Systemd/Timers#Realtime_timer)"
+        bind = "OnCalendar:/etc/systemd/system/__APP__.timer"
+        
+        [main.general.mailalert]
+        ask.en = "Mail alert"
+        ask.fr = "Alerte par mail"
+        type = "select"
+        choices.always = "Always"
+        choices.errors_only = "Only if an error occured"
+        choices.never = "Never alert me"
+        help.en = "Alerts are sent to the admins group"
+        help.fr = "Les alertes sont envoyés aux membres du groupe admins"
+
+        [main.general.keep]
+        ask.en = "How many backups do you want to keep ?"
+        ask.fr = "Combien de sauvegarde souhaitez-vous conserver ?"
+        help.en = "Enter `all` to keep all archives for each backup.<br>Enter an integer between `0 and n` to delete old archives if space is needed (`0` can delete everything, `n` will keep at least `n`)"
+        help.fr = "Saisir `all` pour conserver toutes les archives à cahque sauvegarde.<br>Saisir un entier entre `0 et n` pour supprimer les anciennes archives si on a besoin de place (`0` peut tout supprimer, `n` en conservera minimum `n`)"
+        type = "string"
+        
+    [main.content]
+    name.en = "What should be backed up?"
+    name.fr = "Qu'est ce qui devrait être sauvegardé ?"
+    optional = false
+
+        [main.content.conf]
+        ask.en = "Configuration"
+        ask.fr = "Configuration"
+        type = "boolean"
+
+        [main.content.data]
+        ask.en = "Data"
+        ask.fr = "Données"
+        type = "boolean"
+
+        [main.content.data_multimedia]
+        ask.en = "Data multimedia"
+        ask.fr = "Données multimedia"
+        type = "boolean"
+
+        [main.content.apps]
+        ask.en = "Apps"
+        ask.fr = "Applications"
+        type = "tags"
+        help.en = "App list separated by comma. You can write 'all' to select all apps, even those installed after this yeb app. You can also select all apps but some apps by writing 'exclude:' following by an app list separated by comma."
+        help.fr = "Liste des applications à sauvegarder séparées par une virgule. Mettre `all` pour sauvegarder toutes les applications. Vous pouvez également sélectionner toutes les applications en en excluant certaines en mettant `exclude:` devant le nom des applications séparées par des virgules."
+
+[list]
+name.en = "Last backups list"
+name.fr = "Liste des dernières sauvegardes"
+services = []
+    [list.list]
+    name = ""
+        [list.list.last_backups]
+        ask.en = ""
+        type = "markdown"

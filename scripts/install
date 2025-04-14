@@ -1,0 +1,96 @@
+#!/bin/bash
+
+#=================================================
+# GENERIC START
+#=================================================
+# IMPORT GENERIC HELPERS
+#=================================================
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+#=================================================
+# STORE SETTINGS FROM MANIFEST
+#=================================================
+
+state="fresh install"
+ynh_app_setting_set --app=$app --key=state --value="$state"
+last_run="-"
+ynh_app_setting_set --app=$app --key=last_run --value="$last_run"
+ynh_app_setting_set --app=$app --key=ynh_repo --value="1"
+ynh_app_setting_set --app=$app --key=method --value="local"
+ynh_app_setting_set --app=$app --key=keep --value="all"
+ynh_app_setting_set --app=$app --key=local_repository --value=""
+ynh_app_setting_set --app=$app --key=drive_repository --value=""
+ynh_app_setting_set --app=$app --key=rclone_repository --value=""
+ynh_app_setting_set --app=$app --key=conf --value="1"
+ynh_app_setting_set --app=$app --key=data --value="0"
+
+#=================================================
+# INSTALL RCLONE
+#=================================================
+ynh_script_progression --message="Installing Rclone..."
+
+install_rclone
+
+#=================================================
+# DOWNLOAD, CHECK AND UNPACK SOURCE
+#=================================================
+ynh_script_progression "Setting up source files..."
+
+# Download, check integrity, uncompress and patch the source from manifest.toml
+ynh_setup_source --dest_dir="$install_dir"
+
+chmod +rx "$install_dir/yuno-archive.sh"
+
+
+#=================================================
+# SPECIFIC SETUP
+#=================================================
+# SETUP THE BACKUP METHOD
+#=================================================
+ynh_script_progression --message="Setting up backup method..." --weight=1
+
+mkdir -p /etc/yunohost/hooks.d/backup_method
+
+ynh_add_config --template="backup_method" --destination="/etc/yunohost/hooks.d/backup_method/10-${app}_app"
+chmod go=--- "/etc/yunohost/hooks.d/backup_method/10-${app}_app"
+
+ynh_add_config --template="backup" --destination="$install_dir/backup"
+chmod +rx "$install_dir/backup"
+chown "$app:$app" "$install_dir/backup"
+
+ynh_add_config --template="sudoer" --destination="/etc/sudoers.d/$app"
+chown root:root "/etc/sudoers.d/$app"
+
+
+
+#=================================================
+# SYSTEM CONFIGURATION
+#=================================================
+ynh_script_progression --message="Adding system configurations related to $app..." --weight=1
+
+# Create a dedicated systemd config
+ynh_add_systemd_config
+yunohost service add $app --description="Yuno-archive extends Yunohost backup system" --test_status="systemctl show $app.service  -p ActiveState --value | grep -v failed" --log "/var/log/$app/backup.log"
+# Disable the service, this is to prevent the service from being triggered at boot time
+systemctl disable $app.service --quiet
+
+# Configure the systemd timer
+ynh_add_config --template="systemd.timer" --destination="/etc/systemd/system/$app.timer"
+systemctl enable $app.timer --quiet
+systemctl start $app.timer
+
+
+# Use logrotate to manage application logfile(s)
+ynh_use_logrotate --logfile="/var/log/$app/backup.log"
+
+mkdir -p "/var/log/$app"
+chown -R $app:$app "/var/log/$app"
+chmod u+w "/var/log/$app"
+
+#=================================================
+# END OF SCRIPT
+#=================================================
+
+ynh_script_progression --message="Installation of $app completed" --last

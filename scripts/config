@@ -1,0 +1,256 @@
+#!/bin/bash
+
+source _common.sh
+source /usr/share/yunohost/helpers
+
+ynh_abort_if_errors
+
+YUNO_ARCHIVE="$install_dir/yuno-archive.sh"
+
+#=================================================
+# SPECIFIC GETTERS FOR TOML SHORT KEY
+#=================================================
+
+get__info() {
+    local style="info"
+
+    if [ "${old[state]}" == "failed" ]; then
+        style="danger"
+    elif [ "${old[state]}" == "successful" ]; then
+       style="success"
+    fi
+
+    local -A messages
+    messages[en]="**Backup state**: ${old[state]}<br>**Last run**: ${old[last_run]}"
+    messages[fr]="**État de la sauvegarde** : ${old[state]}<br>**Dernière exécution** : ${old[last_run]}"
+
+    i8n_alert "$style"
+}
+
+get__data_multimedia() {
+    if [ -e /home/yunohost.multimedia/.nobackup ]; then
+        echo "value: false"
+    else
+        echo "value: true"
+    fi
+}
+
+echo_error_fetching_last_backups() {
+    local repo="$1"
+    local -A messages=()
+    messages["en"]="<strong>Error while fetching archives!</strong> Repo or directory \"$repo\" not accessible."
+    messages["fr"]="<strong>Erreur dans la récupération des archives !</strong> Dépôt ou répertoire \"$repo\" inaccessible."
+    
+    i8n_markdown_alert warning
+
+    return 0
+}
+
+echo_last_backups() {
+    local list="$1"
+    if [[ -z "$list" || $(echo "$list" | wc -l) == 0 ]]; then
+        local -A messages=()
+        messages[en]="No backups available"
+        messages[fr]="Aucun backup disponible"
+
+        i8n_markdown_alert info
+        return 0
+    fi
+    
+    echo "ask: |-"
+    echo "$list" | sed s/'^'/'  - '/
+}
+
+fetch_local_backups() {
+    local directory="$1"
+
+    if [[ -z $directory || ! -e $directory || ! -d $directory ]]; then
+        echo_error_fetching_last_backups "$directory"
+        return 0
+    fi
+
+    local list
+    list=$($YUNO_ARCHIVE list local --repository="$directory" --sort=newerfirst 2>/dev/null)
+    echo_last_backups "$list"
+    return 0
+}
+
+fetch_drive_backups() {
+    local drive="$1"
+
+    if [[ -L "$drive" ]]; then
+        drive=$(readlink -f "$drive")
+    fi
+
+    if [[ ! -b $drive ]]; then
+        echo_error_fetching_last_backups "$drive"
+        return 0
+    fi
+
+    local mount_point
+    mount_point=$(mktemp --directory --tmpdir=/mnt)
+
+    if ! mount "${drive}" "${mount_point}" -t auto ; then
+        echo_error_fetching_last_backups "$drive"
+        rm -rf "${mount_point}"
+        return 0
+    fi
+
+    local list
+    list=$($YUNO_ARCHIVE list drive --repository="$drive" --repository="ynh_archives" --sort=newerfirst 2>/dev/null)
+
+    umount "${drive}" 2> /dev/null
+    rm -rf "${mount_point}"
+    echo_last_backups "$list"
+    return 0
+}
+
+fetch_rclone_backups() {
+    local repo="$1"
+
+    if ! rclone listremotes 2>/dev/null | grep -q "^${repo}:$"; then
+        echo_error_fetching_last_backups "$repo"
+        return 0
+    fi
+
+    local list
+    list=$($YUNO_ARCHIVE list rclone --repository="$repo" --path="ynh_archives" --sort=newerfirst 2>/dev/null)
+    echo_last_backups "$list"
+    return 0
+}
+
+
+get__last_backups() {
+
+    local local_repository="/home/yunohost.backup/archives"
+    if [[ ${old[ynh_repo]} == "0" ]]; then
+        local_repository="${old[local_repository]}"
+    fi
+    local drive_repository="${old[drive_repository]}"
+    local rclone_repository="${old[rclone_repository]}"
+    local method="${old[method]}"
+
+    case "$method" in
+    local)
+        fetch_local_backups "$local_repository"
+        ;;
+    drive)
+        fetch_drive_backups "$drive_repository"
+        ;;
+    rclone)
+        fetch_rclone_backups "$rclone_repository"
+        ;;
+    *)
+        echo_error_fetching_last_backups ""
+        return 0
+        ;;
+    esac
+}
+
+get__mounted_drive() {
+    local drive="${old[drive_repository]}"
+    if [[ -z  $drive ]]; then
+        return 0
+    fi
+
+    local mount_point
+    mount_point=$(mount | grep "^$drive" | awk "{ print \$3 }")
+
+    local -A messages
+
+    if [[ -z $mount_point ]]; then
+        messages[en]="Drive **$drive** not mounted"
+        messages[fr]="Lecteur **$drive** non monté"
+        i8n_alert info
+        return 0
+    fi
+
+    messages[en]="Drive **$drive** mounted on **${mount_point}**<br>Are you sure you want to use this drive (it will be mounted and unmounted during backup)?"
+    messages[fr]="Lecteur **$drive** monté sur **${mount_point}**<br>Êtes-vous sûr de vouloir utiliser ce lecteur (il sera monté et démonté durant la sauvegarde) ?"
+    i8n_alert warning
+}
+
+get__rclone_version() {
+    local version
+    version=$(rclone --version | grep "^rclone v" | sed s/'rclone v'/''/)
+
+    local -A messages
+    messages[en]="**Rclone version**: ${version}"
+    messages[fr]="**Version Rclone** : ${version}"
+
+    i8n_alert info
+}
+
+#=================================================
+# SPECIFIC VALIDATORS FOR TOML SHORT KEYS
+#=================================================
+validate__on_calendar() {
+
+    (systemd-analyze calendar "$on_calendar" >/dev/null) ||
+        echo 'Please follow systemd OnCalendar format: https://man.archlinux.org/man/systemd.time.7#CALENDAR_EVENTS'
+}
+
+validate__local_repository() {
+    if [[ -z $local_repository ]]; then
+        echo "Directory cannot be null"
+        return 0
+    fi
+    
+    if [[ ! -d $local_repository ]]; then
+        echo "This directory doesn't exists on filesystem"
+        return 0
+    fi
+}
+
+validate__drive_repository() {
+    if [[ -z $drive_repository ]]; then
+        echo "Drive cannot be null"
+        return 0
+    fi
+}
+
+validate__rclone_repository() {
+    if [[ -z $rclone_repository ]]; then
+        echo "Rclone repo cannot be null"
+        return 0
+    fi
+    
+    if ! rclone listremotes 2>/dev/null | grep -q "^${rclone_repository}:$"; then
+        echo "Rclone repo doesn't exists"
+        return 0
+    fi
+}
+
+validate__keep() {
+    if [[ -z $keep ]]; then
+        echo "keep cannot be null"
+        return 0
+    fi
+
+    if [[ $keep == "all" ]]; then
+        return 0
+    fi
+    
+    if echo "$keep" | grep -qv "^[0-9][0-9]*$"; then
+        echo "keep can be only an integer or 'all' value"
+        return 0
+    fi
+}
+
+#=================================================
+# SPECIFIC SETTERS FOR TOML SHORT KEYS
+#=================================================
+
+set__data_multimedia() {
+    if [ "$data_multimedia" == "0" ]; then
+        mkdir -p /home/yunohost.multimedia/
+        touch /home/yunohost.multimedia/.nobackup
+    else
+        ynh_secure_remove /home/yunohost.multimedia/.nobackup
+    fi
+}
+
+#=================================================
+# GENERIC FINALIZATION
+#=================================================
+ynh_app_config_run $1

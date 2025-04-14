@@ -1,0 +1,12 @@
+[Unit]
+Description=Run backup __APP__
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/sudo __INSTALL_DIR__/backup __APP__
+User=__APP__
+Group=__APP__
+
+#[Install]
+#WantedBy=multi-user.target

@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# Fail on error
+set -Eeuo pipefail
+
+#=========================================================#
+#                     GLOBAL VARS                         #
+#=========================================================#
+
+# yuno-archive script
+declare -r YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
+
+# log file
+declare -r LOG='/var/log/__APP__/backup.log'
+
+# Params sent by yunohost backup script
+declare -r BACKUP_TMP_DIR="$2"
+declare -r BACKUP_NAME="$3"
+declare -r LOCAL_REPO="$4"
+declare -r BACKUP_SIZE="$5"
+declare -r BACKUP_DESCRIPTION="$6"
+
+# Info file name
+declare -r INFO_FILE="${BACKUP_NAME}.info.json"
+# App ID
+declare -r APP="__APP__"
+
+# App config
+IS_DEFAULT_REPO=$(yunohost app setting "${APP}" ynh_repo)
+
+LOCAL_REPOSITORY="/home/yunohost.backup/archives"
+if [[ $IS_DEFAULT_REPO == "0" ]]; then
+    LOCAL_REPOSITORY=$(yunohost app setting "${APP}" local_repository)
+fi
+DRIVE_REPOSITORY=$(yunohost app setting "${APP}" drive_repository)
+RCLONE_REPOSITORY=$(yunohost app setting "${APP}" rclone_repository)
+
+METHOD=$(yunohost app setting "${APP}" method)
+KEEP=$(yunohost app setting "${APP}" keep)
+
+#=========================================================#
+#                    SCRIPT FUNCTIONS                     #
+#=========================================================#
+
+fail() {
+    yunohost app setting "${APP}" state -v "failed"
+    exit 1
+}
+
+do_need_mount() {
+    false
+}
+
+do_backup() {
+    if [[ $(yunohost app setting "${APP}" state) == "ongoing" ]]; then
+        echo "There is another backup process running. Abord" >&2
+        exit 1
+    fi
+
+    echo "---------- BEGIN BACKUP ${BACKUP_NAME} ${METHOD} -----------"
+
+    yunohost app setting "${APP}" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
+    yunohost app setting "${APP}" state -v "ongoing"
+
+    cp "${BACKUP_TMP_DIR}/${INFO_FILE}" /tmp/info.json || fail
+
+    case "$METHOD" in
+        local)
+            $YUNO_ARCHIVE backup local --log="$LOG" --repository="$LOCAL_REPOSITORY" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="/tmp/info.json" --keep="$KEEP" || fail
+            ;;
+        drive)
+            $YUNO_ARCHIVE backup drive --log="$LOG" --drive="$DRIVE_REPOSITORY" --repository="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="/tmp/info.json" --keep="$KEEP"  || fail
+            ;;
+        rclone)
+            $YUNO_ARCHIVE backup rclone --log="$LOG" --repository="$RCLONE_REPOSITORY" --path="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="/tmp/info.json" --keep="$KEEP"  || fail
+            ;;
+        *)
+            echo "Unknown method '$METHOD'" >&2
+            fail
+            ;;
+    esac
+    
+    yunohost app setting "${APP}" state -v "successful"
+}
+
+#=========================================================#
+#                           MAIN                          #
+#=========================================================#
+
+case "$1" in
+    need_mount)
+        do_need_mount
+        ;;
+    mount)
+        do_mount
+        ;;
+    backup)
+        do_backup
+        ;;
+    *)
+        echo "hook ${APP} called with unknown argument \`$1'" >&2
+        exit 1
+    ;;
+esac
+
+exit 0
