@@ -21,28 +21,26 @@ declare -r BACKUP_DESCRIPTION="$6"
 
 # Info file name
 declare -r INFO_FILE="${BACKUP_TMP_DIR}/info.json"
-# App ID
-declare -r APP="__APP__"
 
 # App config
-IS_DEFAULT_REPO=$(yunohost app setting "${APP}" ynh_repo)
+IS_DEFAULT_REPO=$(yunohost app setting "__APP__" ynh_repo)
 
 LOCAL_REPOSITORY="/home/yunohost.backup/archives"
 if [[ $IS_DEFAULT_REPO == "0" ]]; then
-    LOCAL_REPOSITORY=$(yunohost app setting "${APP}" local_repository)
+    LOCAL_REPOSITORY=$(yunohost app setting "__APP__" local_repository)
 fi
-DRIVE_REPOSITORY=$(yunohost app setting "${APP}" drive_repository)
-RCLONE_REPOSITORY=$(yunohost app setting "${APP}" rclone_repository)
+DRIVE_REPOSITORY=$(yunohost app setting "__APP__" drive_repository)
+RCLONE_REPOSITORY=$(yunohost app setting "__APP__" rclone_repository)
 
-METHOD=$(yunohost app setting "${APP}" method)
-KEEP=$(yunohost app setting "${APP}" keep)
+METHOD=$(yunohost app setting "__APP__" method)
+KEEP=$(yunohost app setting "__APP__" keep)
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #
 #=========================================================#
 
 fail() {
-    yunohost app setting "${APP}" state -v "failed"
+    yunohost app setting "__APP__" state -v "failed"
     exit 1
 }
 
@@ -55,15 +53,15 @@ do_mount() {
 }
 
 do_backup() {
-    if [[ $(yunohost app setting "${APP}" state) == "ongoing" ]]; then
+    if [[ $(yunohost app setting "__APP__" state) == "ongoing" ]]; then
         echo "There is another backup process running. Abord" >&2
         exit 1
     fi
 
     echo "---------- BEGIN BACKUP ${BACKUP_NAME} ${METHOD} -----------"
 
-    yunohost app setting "${APP}" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
-    yunohost app setting "${APP}" state -v "ongoing"
+    yunohost app setting "__APP__" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
+    yunohost app setting "__APP__" state -v "ongoing"
 
     case "$METHOD" in
         local)
@@ -81,7 +79,7 @@ do_backup() {
             ;;
     esac
     
-    yunohost app setting "${APP}" state -v "successful"
+    yunohost app setting "__APP__" state -v "successful"
     return 0
 }
 
@@ -100,7 +98,7 @@ case "$1" in
         do_backup
         ;;
     *)
-        echo "hook ${APP} called with unknown argument \`$1'" >&2
+        echo "hook __APP__ called with unknown argument \`$1'" >&2
         exit 1
     ;;
 esac
