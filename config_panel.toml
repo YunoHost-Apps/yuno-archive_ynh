@@ -108,22 +108,28 @@ services = []
     name.fr = "Qu'est ce qui devrait être sauvegardé ?"
     optional = false
 
-        [main.content.conf]
+        [main.content.save_system_conf]
         ask.en = "Configuration"
         ask.fr = "Configuration"
+        help.en = "SSL certificates, YunoHost configurations, Manually modified configurations, User database, specific conf hooks (begin with XX-conf....)"
+        help.fr = "Certificats SSL, Configurations YunoHost, Configurations modifées manuellement, Bases de données utiliateurs, hooks spécifiques de conf (commencent par XX-conf...)"
         type = "boolean"
 
-        [main.content.data]
+        [main.content.save_data]
         ask.en = "Data"
         ask.fr = "Données"
+        help.en = "User data located in /home/USER user mails, user mails, specific data hooks (begin with XX-data...)."
+        help.fr = "Données utilisataurs situées dans /home/USER, mails utilisateurs, hooks spécifiques de données (commencent par XX-data...)."
         type = "boolean"
 
-        [main.content.data_multimedia]
+        [main.content.save_data_multimedia]
         ask.en = "Data multimedia"
         ask.fr = "Données multimedia"
+        help.en = "Multimedia data stored in /home/yunohost.multimedia. Warn, this option doesn't consider .nobackup file!"
+        help.fr = "Données multimédia stockées dans /home/yunohost.multimedia. Attention, si cette option est activée, elle ne tient pas compte du fichier .nobackup !"
         type = "boolean"
 
-        [main.content.apps]
+        [main.content.save_apps]
         ask.en = "Apps"
         ask.fr = "Applications"
         type = "tags"

@@ -27,13 +27,6 @@ get__info() {
     i8n_alert "$style"
 }
 
-get__data_multimedia() {
-    if [ -e /home/yunohost.multimedia/.nobackup ]; then
-        echo "value: false"
-    else
-        echo "value: true"
-    fi
-}
 
 echo_error_fetching_last_backups() {
     local repo="$1"
@@ -241,14 +234,6 @@ validate__keep() {
 # SPECIFIC SETTERS FOR TOML SHORT KEYS
 #=================================================
 
-set__data_multimedia() {
-    if [ "$data_multimedia" == "0" ]; then
-        mkdir -p /home/yunohost.multimedia/
-        touch /home/yunohost.multimedia/.nobackup
-    else
-        ynh_secure_remove /home/yunohost.multimedia/.nobackup
-    fi
-}
 
 #=================================================
 # GENERIC FINALIZATION

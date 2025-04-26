@@ -27,13 +27,13 @@ ram.build = "500M"
 ram.runtime = "50M"
 
 [install]
-    [install.data]
+    [install.save_data]
     ask.en = "Should backup emails and user home directories?"
     ask.fr = "Doit-on sauvegarder les mails et les répertoires (home) des utilisateurs ?"
     type = "boolean"
     default = true
 
-    [install.apps]
+    [install.save_apps]
     ask.en = "Which apps should backup?"
     ask.fr = "Quelles applications doivent être sauvegardées ?"
     help.en = "App list separated by comma. You can write 'all' to select all apps, even those installed after this borg app. You can also select all apps but some apps by writing 'exclude:' following by an app list separated by comma."

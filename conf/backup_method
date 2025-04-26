@@ -53,10 +53,6 @@ do_mount() {
 }
 
 do_backup() {
-    if [[ $(yunohost app setting "__APP__" state) == "ongoing" ]]; then
-        echo "There is another backup process running. Abord" >&2
-        exit 1
-    fi
 
     echo "---------- BEGIN BACKUP ${BACKUP_NAME} ${METHOD} -----------"
 
@@ -78,6 +74,12 @@ do_backup() {
             fail
             ;;
     esac
+
+    # To make backup visible on yunohost Backup local menu, we modify name file and add a symbolic link with only tar name
+    if [[ $IS_DEFAULT_REPO == "1" ]]; then
+        mv "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar.gzip" "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar.gz"
+        ln -sfn "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar.gz" "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar"
+    fi
     
     yunohost app setting "__APP__" state -v "successful"
     return 0
