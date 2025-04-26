@@ -11,7 +11,7 @@
 # https://rclone.org/downloads/#script-download-and-install
 # Script return 3 if rclone already installed. For installation process, is not an error
 install_rclone() {   
-    if curl https://rclone.org/install.sh | bash; then
+    if curl -s https://rclone.org/install.sh 2>/dev/null | bash; then
         return 0
     else
         ret=$?
