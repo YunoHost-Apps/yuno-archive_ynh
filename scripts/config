@@ -71,29 +71,15 @@ fetch_local_backups() {
 fetch_drive_backups() {
     local drive="$1"
 
-    if [[ -L "$drive" ]]; then
-        drive=$(readlink -f "$drive")
-    fi
-
-    if [[ ! -b $drive ]]; then
-        echo_error_fetching_last_backups "$drive"
-        return 0
-    fi
-
-    local mount_point
-    mount_point=$(mktemp --directory --tmpdir=/mnt)
-
-    if ! mount "${drive}" "${mount_point}" -t auto ; then
-        echo_error_fetching_last_backups "$drive"
-        rm -rf "${mount_point}"
-        return 0
-    fi
-
     local list
-    list=$($YUNO_ARCHIVE list drive --repository="$drive" --repository="ynh_archives" --sort=newerfirst 2>/dev/null)
+    list=$($YUNO_ARCHIVE list drive --drive="$drive" --repository="ynh_archives" --sort=newerfirst 2>&1)
 
-    umount "${drive}" 2> /dev/null
-    rm -rf "${mount_point}"
+    # yuno-archive echo ❌ emoji for errors
+    if echo "$list" | grep -q "❌"; then
+        echo_error_fetching_last_backups "$drive"
+        return 0
+    fi
+
     echo_last_backups "$list"
     return 0
 }
