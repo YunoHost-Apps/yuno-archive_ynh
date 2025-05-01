@@ -158,7 +158,7 @@ fi
 
 # Add apps according to configuration
 declare -a apps=()
-save_apps=$(sudo yunohost app setting "__APP__" apps | tr -d ' ')
+save_apps=$(sudo yunohost app setting "__APP__" save_apps | tr -d ' ')
 echo "Add apps to backup script..." | tee -a "$LOG_FILE"
 for application in $(sudo ls /etc/yunohost/apps/); do
 
@@ -191,6 +191,8 @@ else
     if [[ ${#system[@]} -ne 0 ]]; then
         option_system=" --system ${system[*]}"
     fi
+
+    echo "yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps" | tee -a "$LOG_FILE" 2>&1
 
     current_date=$(date +"%Y%m%d-%H%M%S")
     if ! sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps | tee -a "$LOG_FILE" 2>&1; then
