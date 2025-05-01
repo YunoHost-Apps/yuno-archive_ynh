@@ -174,7 +174,7 @@ for application in $(sudo ls /etc/yunohost/apps/); do
     fi
 
     apps+=("$application")
-    echo "Apps '$application' added'" | tee -a "$LOG_FILE"
+    echo "- App '$application' added'" | tee -a "$LOG_FILE"
 done
 
 if [[ ${#apps[@]} -eq 0 && ${#system[@]} -eq 0 ]]; then
