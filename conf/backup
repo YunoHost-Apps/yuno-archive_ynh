@@ -195,7 +195,11 @@ else
     echo "yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps" | tee -a "$LOG_FILE" 2>&1
 
     current_date=$(date +"%Y%m%d-%H%M%S")
-    if ! sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps | tee -a "$LOG_FILE" 2>&1; then
+    # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
+    backup_output=$(sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps 2>&1)
+    backup_ret=$?
+    echo -e "$backup_output" | tee -a "$LOG_FILE"
+    if [[ $backup_ret -ne 0 ]]; then
         error "[ERROR] The backup miserably failed to backup."
     fi
 fi
