@@ -62,8 +62,10 @@ end_script() {
     method="$(sudo yunohost app setting "__APP__" method)"
     repository="$(sudo yunohost app setting "__APP__" "${method}_repository")"
     mailalert="$(sudo yunohost app setting "__APP__" mailalert)"
+    msg_log="For more details, consult /var/log/__APP__/backup.log"
+
     if [[  -n "$ERRORS" && $mailalert != "never" ]]; then
-        cat <(echo -e "$ERRORS\n\n\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ failed onto $method $repository" admins
+        cat <(echo -e "${ERRORS}\n${msg_log}\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ failed onto $method $repository" admins
     elif [ "$mailalert" == "always" ]; then
         mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ succeeded onto $repository" admins < "$LOG_FILE"
     fi
@@ -117,6 +119,9 @@ fi
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
 echo "${now} STARTING BACKUP __APP__" | tee -a "$LOG_FILE"
+
+# Add a line to yuno-archive log file (different from this script $LOG_FILE which is a temp log file for mail)
+sudo echo "${now} STARTING BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" > /dev/null
 
 # system hooks methods setted with configuration
 declare -a system=()
@@ -192,13 +197,15 @@ else
         option_system=" --system ${system[*]}"
     fi
 
-    echo "yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps" | tee -a "$LOG_FILE" 2>&1
-
     current_date=$(date +"%Y%m%d-%H%M%S")
+    echo "yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps" | tee -a "$LOG_FILE" 2>&1
+   
     # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
     backup_output=$(sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps 2>&1)
     backup_ret=$?
-    echo -e "$backup_output" | tee -a "$LOG_FILE"
+    # echo whitout colors to log file (for the mail)
+    echo -e "$backup_output"  | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' >> "$LOG_FILE"
+    echo -e "$backup_output"
     if [[ $backup_ret -ne 0 ]]; then
         error "[ERROR] The backup miserably failed to backup."
     fi
@@ -206,6 +213,7 @@ fi
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
 echo "${now} END BACKUP __APP__" | tee -a "$LOG_FILE"
-
+# Add a line to yuno-archive log file (different from this script $LOG_FILE which is a temp log file for mail)
+sudo echo "${now} END BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" > /dev/null
 
 end_script
