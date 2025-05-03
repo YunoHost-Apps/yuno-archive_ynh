@@ -1,4 +1,4 @@
-Intégration de l'application Yuno-archive vous permet de sauvegarder de manière simple votre serveur sur plusieurs types de destinations :
+Intégration de l'application Yuno Archive vous permet de sauvegarder de manière simple votre serveur sur plusieurs types de destinations :
 - Un répertoire local
 - Un disque dur externe (monté et démonté durant le processus)
 - Un dépôt rclone
