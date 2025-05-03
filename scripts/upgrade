@@ -54,12 +54,6 @@ ynh_add_config --template="backup" --destination="$install_dir/backup"
 chmod +xr "$install_dir/backup"
 chown "$app:$app" "$install_dir/backup"
 
-ynh_add_config --template="helpers" --destination="$install_dir/helpers"
-chmod +r "$install_dir/helpers"
-chown "$app:$app" "$install_dir/helpers"
-
-chmod +rx "$install_dir"
-
 #=================================================
 # REAPPLY SYSTEM CONFIGURATIONS
 #=================================================

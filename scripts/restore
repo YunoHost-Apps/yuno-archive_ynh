@@ -68,7 +68,7 @@ ynh_restore_file --origin_path="/etc/sudoers.d/$app"
 #=================================================
 
 # Restore rclone configuration
-ynh_backup --not_mandatory --origin_path="/root/.config/rclone"
+ynh_restore_file --not_mandatory --origin_path="/root/.config/rclone"
 
 #=================================================
 # END OF SCRIPT
