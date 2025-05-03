@@ -3,7 +3,7 @@
 packaging_format = 2
 
 id = "yuno-archive"
-name = "Yunohost simple backup script"
+name = "Yuno Archive"
 description.en = "Extend functionnality of built-in yunohost backup system."
 description.fr = "Étend les fonctionnalités du backup fourni par Yunohost en permettant la sauvegarde auto à intervales régulières et l'envoi sur distant via rclone."
 
