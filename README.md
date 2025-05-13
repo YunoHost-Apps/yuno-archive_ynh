@@ -4,8 +4,8 @@ It shall NOT be edited by hand.
 -->
 
 <h1>
-  <img src="https://raw.githubusercontent.com/YunoHost/apps/main/logos/yuno-archive.png" width="32px" alt="Logo of Yunohost simple backup script">
-  Yunohost simple backup script, packaged for YunoHost
+  <img src="https://raw.githubusercontent.com/YunoHost/apps/main/logos/yuno-archive.png" width="32px" alt="Logo of Yuno Archive">
+  Yuno Archive, packaged for YunoHost
 </h1>
 
 Extend functionnality of built-in yunohost backup system.
@@ -21,7 +21,7 @@ Extend functionnality of built-in yunohost backup system.
 
 [![Automatic tests level](https://apps.yunohost.org/badge/cilevel/yuno-archive)](https://ci-apps.yunohost.org/ci/apps/yuno-archive/)
 
-🛠️ Upstream Yunohost simple backup script repository: <https://github.com/Mistermasque/yuno-archive>
+🛠️ Upstream Yuno Archive repository: <https://github.com/Mistermasque/yuno-archive>
 
 Pull request are welcome and should target the [`testing` branch](https://github.com/YunoHost-Apps/yuno-archive_ynh/tree/testing).
 
