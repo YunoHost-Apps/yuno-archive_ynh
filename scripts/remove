@@ -12,38 +12,33 @@ source /usr/share/yunohost/helpers
 #=================================================
 # REMOVE SERVICE INTEGRATION IN YUNOHOST
 #=================================================
+ynh_script_progression "Stopping service related to $app..."
+ynh_systemctl --service="$app" --action="stop"
 
 # Remove the service from the list of services known by YunoHost (added from `yunohost service add`)
-if ynh_exec_warn_less yunohost service status $app >/dev/null; then
-    ynh_script_progression --message="Removing $app service integration..."
-    yunohost service remove $app
+if ynh_hide_warnings yunohost service status $app >/dev/null; then
+    ynh_script_progression "Removing $app service integration..."
+    yunohost service remove "$app"
 fi
-
-#=================================================
-# REMOVE RCLONE
-#=================================================
-# ynh_script_progression --message="Removing Rclone..."
-
-# remove_rclone
 
 #=================================================
 # REMOVE SYSTEM CONFIGURATIONS
 #=================================================
-ynh_script_progression --message="Removing system configurations related to $app..." --weight=1
+ynh_script_progression "Removing system configurations related to $app..."
 
-systemctl stop $app.timer
-systemctl disable $app.timer --quiet
-ynh_remove_systemd_config
+ynh_systemctl --service="$app.timer" --action="stop"
+ynh_hide_warnings ynh_systemctl --service="$app.timer" --action="disable"
+ynh_config_remove_systemd
 
-ynh_secure_remove --file="/etc/systemd/system/$app.timer"
-ynh_secure_remove --file="/etc/yunohost/hooks.d/backup_method/10-${app}_app"
-ynh_secure_remove --file="/etc/sudoers.d/$app"
+ynh_safe_rm "/etc/systemd/system/$app.timer"
+ynh_safe_rm "/etc/yunohost/hooks.d/backup_method/10-${app}_app"
+ynh_safe_rm "/etc/sudoers.d/$app"
 
 # Remove logrotate to manage application logfile(s)
-ynh_remove_logrotate
+ynh_config_remove_logrotate
 
 #=================================================
 # END OF SCRIPT
 #=================================================
 
-ynh_script_progression --message="Removal of $app completed" --last
+ynh_script_progression "Removal of $app completed"
