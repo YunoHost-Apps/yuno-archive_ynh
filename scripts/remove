@@ -33,6 +33,8 @@ ynh_config_remove_systemd
 ynh_safe_rm "/etc/systemd/system/$app.timer"
 ynh_safe_rm "/etc/yunohost/hooks.d/backup_method/10-${app}_app"
 ynh_safe_rm "/etc/sudoers.d/$app"
+# Folder created by backup method
+ynh_safe_rm "/home/yunohost.backup/tmp_${app}"
 
 # Remove logrotate to manage application logfile(s)
 ynh_config_remove_logrotate
