@@ -24,7 +24,7 @@ ynh_systemctl --service="${app}.timer" --action="stop"
 #=================================================
 ynh_script_progression "Ensuring downward compatibility..."
 
-ynh_app_setting_set --key="state" --value="not run since last update"
+ynh_app_setting_set --key="state" --value="updating"
 ynh_app_setting_set --key="last_run" --value="-"
 
 #=================================================
@@ -55,10 +55,10 @@ ynh_script_progression "Upgrading system configurations related to $app..."
 
 # Create a dedicated systemd config
 ynh_config_add_systemd
-yunohost service add $app --description="Yuno Archive" --test_status="systemctl show $app.service  -p ActiveState --value | grep -v failed"  --log "/var/log/$app/backup.log"
 # Disable the service, this is to prevent the service from being triggered at boot time
 ynh_hide_warnings ynh_systemctl --service="$app" --action="disable"
 
+yunohost service add $app --description="Yuno Archive" --test_status="systemctl show $app.service -p ActiveState --value | grep -v failed" --log "/var/log/$app/backup.log"
 
 ynh_config_add --template="systemd.timer" --destination="/etc/systemd/system/$app.timer"
 ynh_systemctl --service="$app.timer" --action="enable"
@@ -84,5 +84,6 @@ ynh_systemctl --service="$app.timer" --action="start"
 #=================================================
 # END OF SCRIPT
 #=================================================
-
+# Update state
+ynh_app_setting_set --key="state" --value="not run since last update"
 ynh_script_progression "Upgrade of $app completed"
