@@ -11,7 +11,7 @@ source /usr/share/yunohost/helpers
 #=================================================
 # DECLARE DATA AND CONF FILES TO BACKUP
 #=================================================
-ynh_print_info --message="Declaring files to be backed up..."
+ynh_print_info "Declaring files to be backed up..."
 
 ### N.B. : the following 'ynh_backup' calls are only a *declaration* of what needs
 ### to be backuped and not an actual copy of any file. The actual backup that
@@ -22,35 +22,37 @@ ynh_print_info --message="Declaring files to be backed up..."
 # BACKUP THE APP MAIN DIR
 #=================================================
 
-ynh_backup --src_path="$install_dir"
+ynh_backup "$install_dir"
 
 #=================================================
 # BACKUP BACKUP METHOS
 #=================================================
-ynh_backup --src_path="/etc/yunohost/hooks.d/backup_method/10-${app}_app"
+ynh_backup "/etc/yunohost/hooks.d/backup_method/10-${app}_app"
 
 #=================================================
 # SYSTEM CONFIGURATION
 #=================================================
 
 # Backup the systemd service unit
-ynh_backup --src_path="/etc/systemd/system/$app.service"
-ynh_backup --src_path="/etc/systemd/system/$app.timer"
+ynh_backup "/etc/systemd/system/$app.service"
+ynh_backup "/etc/systemd/system/$app.timer"
 
 # Backup the sudoers file
-ynh_backup --src_path="/etc/sudoers.d/$app"
+ynh_backup "/etc/sudoers.d/$app"
 
 # Backup the logrotate configuration
-ynh_backup --src_path="/etc/logrotate.d/$app"
+ynh_backup "/etc/logrotate.d/$app"
 
 #=================================================
 # RCLONE CONFIGURATION
 #=================================================
 
-ynh_backup --not_mandatory --src_path="/root/.config/rclone"
+if [[ -e "/root/.config/rclone" ]]; then
+    ynh_backup "/root/.config/rclone"
+fi
 
 #=================================================
 # END OF SCRIPT
 #=================================================
 
-ynh_print_info --message="Backup script completed for $app. (YunoHost will then actually copy those files to the archive)."
+ynh_print_info "Backup script completed for $app. (YunoHost will then actually copy those files to the archive)."

@@ -112,8 +112,10 @@ while getopts "fh" option; do
    esac
 done
 
-if [[ ! $FORCE && $(yunohost app setting "__APP__" state) == "ongoing" ]]; then
-    error "[ERROR] There is another backup process running. Abord.\nIf the problem persist after reboot, call '$SCRIPT_PATH' with -f option"
+state=$(yunohost app setting "__APP__" state)
+
+if [[ ! $FORCE && ($state == "ongoing" || $state == "updating") ]]; then
+    error "[ERROR] There is another backup process running or app in updating state. Abord.\nIf the problem persist after reboot, call '$SCRIPT_PATH' with -f option"
     end_script 1
 fi
 

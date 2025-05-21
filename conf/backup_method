@@ -19,6 +19,13 @@ declare -r LOCAL_REPO="$4"
 declare -r BACKUP_SIZE="$5"
 declare -r BACKUP_DESCRIPTION="$6"
 
+# Export tmp dir root to use yunohost.backup (/tmp is often too small to create archive file)
+# We use this in order to avoid multiple temp folder in yunohost.backup dir if app crashes before cleanup
+export YARCH_TMPDIR="/home/yunohost.backup/tmp___APP__"
+mkdir -p "$YARCH_TMPDIR"
+# cleanup previous temp files (if app creshed)
+rm -rf "$YARCH_TMPDIR"/*
+
 # Info file name
 declare -r INFO_FILE="${BACKUP_TMP_DIR}/info.json"
 
@@ -58,6 +65,13 @@ do_backup() {
 
     yunohost app setting "__APP__" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
     yunohost app setting "__APP__" state -v "ongoing"
+    # Check size in tmp dir
+    local available_space_in_temp
+    available_space_in_temp=$(findmnt --target "$YARCH_TMPDIR" --output AVAIL --bytes --noheadings --first-only)
+    if [[ $BACKUP_SIZE -gt $available_space_in_temp ]]; then
+        echo "ERROR : Not enough space to create temp archive (space neeeded = $(hrb "${BACKUP_SIZE}") available space in temp ($YARCH_TMPDIR) = $(hrb "${available_space_in_temp}"))" >&2
+        fail
+    fi
 
     case "$METHOD" in
         local)
