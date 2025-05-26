@@ -23,8 +23,8 @@ install_rclone
 ynh_script_progression "Restoring the app main directory..."
 
 ynh_restore "$install_dir"
-chmod +rx "$install_dir"
-chmod +rx "$install_dir/yuno-archive.sh"
+chmod ug+rx "$install_dir/yuno-archive.sh"
+chmod ug+rx "$install_dir/backup"
 
 #=================================================
 # RESTORE BACKUP METHODS
@@ -68,6 +68,9 @@ chown root:root "/etc/sudoers.d/$app"
 
 # Restore rclone configuration
 ynh_restore "/root/.config/rclone"
+if [[ -e  "/root/.config/rclone" ]]; then
+    chown root:root "/root/.config/rclone"
+fi
 
 #=================================================
 # END OF SCRIPT
