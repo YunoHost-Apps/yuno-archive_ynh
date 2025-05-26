@@ -68,7 +68,7 @@ ynh_script_progression "Adding system configurations related to $app..."
 
 # Create a dedicated systemd config
 ynh_config_add_systemd
-yunohost service add $app --description="Yuno Archive" --test_status="systemctl show $app.service  -p ActiveState --value | grep -v failed" --log "/var/log/$app/backup.log"
+yunohost service add $app --description="Yuno Archive" --test_status="systemctl show $app.service -p ActiveState --value | grep -v failed" --log "/var/log/$app/backup.log"
 # Disable the service, this is to prevent the service from being triggered at boot time
 ynh_hide_warnings ynh_systemctl --service="$app" --action="disable"
 
