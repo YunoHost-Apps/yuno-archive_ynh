@@ -61,3 +61,9 @@ ram.runtime = "50M"
     url = "https://github.com/Mistermasque/yuno-archive/archive/refs/tags/0.2.0.tar.gz"
     sha256 = "71d1f5bf308751a829c48eed4b583a0d280ba080fdf73b80869fb9fd07e9c0dd"
     autoupdate.strategy = "latest_github_tag"
+
+    [resources.system_user]
+
+    [resources.install_dir]
+
+    [resources.permissions]
