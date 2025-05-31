@@ -17,7 +17,7 @@ get__info() {
     if [ "${old[state]}" == "failed" ]; then
         style="danger"
     elif [ "${old[state]}" == "successful" ]; then
-       style="success"
+        style="success"
     fi
 
     local -A messages
@@ -27,13 +27,12 @@ get__info() {
     i8n_alert "$style"
 }
 
-
 echo_error_fetching_last_backups() {
     local repo="$1"
     local -A messages=()
     messages["en"]="<strong>Error while fetching archives!</strong> Repo or directory \"$repo\" not accessible."
     messages["fr"]="<strong>Erreur dans la récupération des archives !</strong> Dépôt ou répertoire \"$repo\" inaccessible."
-    
+
     i8n_markdown_alert warning
 
     return 0
@@ -41,6 +40,7 @@ echo_error_fetching_last_backups() {
 
 echo_last_backups() {
     local list="$1"
+
     if [[ -z "$list" || $(echo "$list" | wc -l) == 0 ]]; then
         local -A messages=()
         messages[en]="No backups available"
@@ -49,9 +49,14 @@ echo_last_backups() {
         i8n_markdown_alert info
         return 0
     fi
-    
-    echo "ask: |-"
-    echo "$list" | sed s/'^'/'  - '/
+
+    local data=$(echo "$list" | tail --lines=+2)
+    local -A header=()
+    header[en]=$(echo -e "Name\tSize\tDate")
+    header[fr]=$(echo -e "Nom\tTaille\tDate")
+    i8n_markdown_table "${data}"
+
+    return 0
 }
 
 fetch_local_backups() {
@@ -63,7 +68,7 @@ fetch_local_backups() {
     fi
 
     local list
-    list=$($YUNO_ARCHIVE list local --repository="$directory" --sort=newerfirst 2>/dev/null)
+    list=$($YUNO_ARCHIVE list local --repository="$directory" --sort=newerfirst --full --human_readable 2>/dev/null)
     echo_last_backups "$list"
     return 0
 }
@@ -72,7 +77,7 @@ fetch_drive_backups() {
     local drive="$1"
 
     local list
-    list=$($YUNO_ARCHIVE list drive --drive="$drive" --repository="ynh_archives" --sort=newerfirst 2>&1)
+    list=$($YUNO_ARCHIVE list drive --drive="$drive" --repository="ynh_archives" --sort=newerfirst --full --human_readable 2>&1)
 
     # yuno-archive echo ❌ emoji for errors
     if echo "$list" | grep -q "❌"; then
@@ -93,11 +98,10 @@ fetch_rclone_backups() {
     fi
 
     local list
-    list=$($YUNO_ARCHIVE list rclone --repository="$repo" --path="ynh_archives" --sort=newerfirst 2>/dev/null)
+    list=$($YUNO_ARCHIVE list rclone --repository="$repo" --path="ynh_archives" --sort=newerfirst --full --human_readable 2>/dev/null)
     echo_last_backups "$list"
     return 0
 }
-
 
 get__last_backups() {
 
@@ -128,7 +132,7 @@ get__last_backups() {
 
 get__mounted_drive() {
     local drive="${old[drive_repository]}"
-    if [[ -z  $drive ]]; then
+    if [[ -z $drive ]]; then
         return 0
     fi
 
@@ -174,7 +178,7 @@ validate__local_repository() {
         echo "Directory cannot be null"
         return 0
     fi
-    
+
     if [[ ! -d $local_repository ]]; then
         echo "This directory doesn't exists on filesystem"
         return 0
@@ -193,7 +197,7 @@ validate__rclone_repository() {
         echo "Rclone repo cannot be null"
         return 0
     fi
-    
+
     if ! rclone listremotes 2>/dev/null | grep -q "^${rclone_repository}:$"; then
         echo "Rclone repo doesn't exists"
         return 0
@@ -209,7 +213,7 @@ validate__keep() {
     if [[ $keep == "all" ]]; then
         return 0
     fi
-    
+
     if echo "$keep" | grep -qv "^[0-9][0-9]*$"; then
         echo "keep can be only an integer or 'all' value"
         return 0
@@ -219,7 +223,6 @@ validate__keep() {
 #=================================================
 # SPECIFIC SETTERS FOR TOML SHORT KEYS
 #=================================================
-
 
 #=================================================
 # GENERIC FINALIZATION

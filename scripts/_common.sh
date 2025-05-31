@@ -68,6 +68,55 @@ i8n_alert() {
     done
 }
 
+i8n_multiline() {
+    echo "ask:"
+
+    for lang in "${!messages[@]}"; do
+        echo "  ${lang}: |"
+        echo -e "${messages[${lang}]}" | sed 's/^/    /'
+    done
+}
+
+_table_line_to_html_table_line() {
+    local line="$1"
+    local tag=${2:-"td"}
+
+    if [[ -z "$line" ]]; then
+        echo ""
+        return
+    fi
+
+    # Convert tab to <td> and add <tr> at the beginning and </tr> at the end
+    printf "<tr>"
+    while IFS=$'\t' read -ra columns; do
+        for col in "${columns[@]}"; do
+            printf "<%s>%s</%s>" "${tag}" "${col}" "${tag}"
+        done
+    done <<< "$line"
+
+    printf "</tr>"
+}
+
+i8n_markdown_table() {
+    local data=${1:-""}
+
+    echo "ask:"
+
+    for lang in "${!header[@]}"; do
+        html_header=$(_table_line_to_html_table_line "${header[${lang}]}" "th")
+
+        echo "  ${lang}: |"
+        echo "    <table width=\"100%\">"
+        echo "    <thead>${html_header}</thead>"
+        echo "    <tbody>"
+        while IFS= read -r line; do
+            html_line=$(_table_line_to_html_table_line "$line")
+            echo "      ${html_line}"
+        done <<< "${data}"
+        echo "    </tbody>"
+        echo "    </table>"
+    done
+}
 
 #=================================================
 # EXPERIMENTAL HELPERS
