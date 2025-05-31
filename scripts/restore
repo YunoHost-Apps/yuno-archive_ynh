@@ -25,6 +25,7 @@ ynh_script_progression "Restoring the app main directory..."
 ynh_restore "$install_dir"
 chmod ug+rx "$install_dir/yuno-archive.sh"
 chmod ug+rx "$install_dir/backup"
+chmod ug+rx "$install_dir/backup_hook"
 
 #=================================================
 # RESTORE BACKUP METHODS

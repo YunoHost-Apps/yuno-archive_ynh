@@ -54,9 +54,19 @@ mkdir -p /etc/yunohost/hooks.d/backup_method
 ynh_config_add --template="backup_method" --destination="/etc/yunohost/hooks.d/backup_method/10-${app}_app"
 chmod go=--- "/etc/yunohost/hooks.d/backup_method/10-${app}_app"
 
+#=================================================
+# INSTALL BACKUP SERVICE SCRIPT
+#=================================================
+
+ynh_script_progression "Setting up backup service script..."
+
 ynh_config_add --template="backup" --destination="$install_dir/backup"
 chown "$app:$app" "$install_dir/backup"
 chmod ug+rx "$install_dir/backup"
+
+ynh_config_add --template="backup_hook" --destination="$install_dir/backup_hook"
+chown "$app:$app" "$install_dir/backup_hook"
+chmod ug+rx "$install_dir/backup_hook"
 
 ynh_config_add --template="sudoer" --destination="/etc/sudoers.d/$app"
 chown root:root "/etc/sudoers.d/$app"

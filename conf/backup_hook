@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+
+# Example hook file
+
+# Fail on error
+set -euo pipefail
+
+#=============================================================================#
+#                         VARIABLES SENT TO SCRIPT                            #
+#=============================================================================#
+declare -r HOOK="$1" # before | after
+declare -r ACTION="$2" # backup | restore
+
+#=============================================================================#
+#                                 GLOBALES                                    #
+#=============================================================================#
+# List of apps in save script
+declare -a APPS=()
+
+
+#=============================================================================#
+#                                  ACTIONS                                    #
+#=============================================================================#
+
+# Do before script stufs
+do_before() {
+    nextcloud_set_maintenance_mode on
+}
+
+# do after script stuf
+do_after() {
+    nextcloud_set_maintenance_mode off
+}
+
+#=============================================================================#
+#                         HELPERS FOR INSTALLED APPS                          #
+#=============================================================================#
+
+nextcloud_exec_occ() {
+    local app_id="$1"
+    shift
+
+    local php_version=""
+    php_version=$(yunohost app info "${app_id}" --full | grep "php_version: ." | sed s/'.*php_version: '//)
+    install_dir=$(yunohost app info "${app_id}" --full | grep "install_dir: ." | head -n1 | sed s/'.*install_dir: '//)
+
+    sudo -u "${app_id}" "php${php_version}" --define apc.enable_cli=1 "${install_dir}/occ" --no-interaction --no-ansi "$@"
+}
+
+nextcloud_set_maintenance_mode() {
+    local mode=${1:-on}
+
+    if [[ $mode != 'on' && $mode != 'off' ]]; then
+        echo "nextcloud_set_maintenance_mode : ERROR unknown mode '${mode}'" >&2
+        exit 1
+    fi 
+
+    declare -a nextloud_apps
+    mapfile -t nextloud_apps < <( (IFS=$'\n' && echo "${APPS[*]}") | grep -E '^nextcloud(__[0-9]+)?')
+
+    if [[ ${#nextloud_apps[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    for app_id in "${nextloud_apps[@]}"; do
+        echo "Set maintenance mode for nextcloud instance '${app_id}' to ${mode}"
+        nextcloud_exec_occ "$app_id" maintenance:mode "--${mode}"
+    done
+}
+
+#=============================================================================#
+#                                    MAIN                                     #
+#=============================================================================#
+
+# Fill APPS global
+save_apps=$(yunohost app setting "__APP__" save_apps | tr -d ' ')
+for application in /etc/yunohost/apps/*; do
+
+    if ( [[ "$save_apps" =~ ^exclude: ]] && grep -wq "$application" <<< "$save_apps" ) ||
+       ( [[ "$save_apps" != "all" ]] && [[ ! "$save_apps" =~ ^exclude: ]]  && ! grep -wq "$application" <<< "$save_apps" );
+    then
+        continue
+    fi
+
+    # application var contain full path ie : /et/yunohost/apps/<application>
+    if [[ ! -f "$application/scripts/backup" ]]; then
+        continue
+    fi
+
+    # Delete path before add to APPS array
+    APPS+=("${application#/etc/yunohost/apps/}")
+done
+
+# Execute before / after action
+case $HOOK in
+before)
+    do_before
+    ;;
+after)
+    do_after
+    ;;
+*)
+    echo "Unknown hook ${HOOK}" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

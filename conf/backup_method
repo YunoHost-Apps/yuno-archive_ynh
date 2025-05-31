@@ -29,6 +29,9 @@ rm -rf "$YARCH_TMPDIR"/*
 # Info file name
 declare -r INFO_FILE="${BACKUP_TMP_DIR}/info.json"
 
+# Hook script
+declare -r HOOK_FILE="__INSTALL_DIR__/backup_hook"
+
 # App config
 IS_DEFAULT_REPO=$(yunohost app setting "__APP__" ynh_repo)
 
@@ -41,6 +44,8 @@ RCLONE_REPOSITORY=$(yunohost app setting "__APP__" rclone_repository)
 
 METHOD=$(yunohost app setting "__APP__" method)
 KEEP=$(yunohost app setting "__APP__" keep)
+
+VERBOSE="1"
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #
@@ -73,20 +78,57 @@ do_backup() {
         fail
     fi
 
+    local verbose_option=""
+    if [[ $VERBOSE == "1" ]]; then
+        verbose_option="--verbose"
+    fi
+
     case "$METHOD" in
-        local)
-            $YUNO_ARCHIVE backup local --log="$LOG" --repository="$LOCAL_REPOSITORY" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="${INFO_FILE}" --keep="$KEEP" || fail
-            ;;
-        drive)
-            $YUNO_ARCHIVE backup drive --log="$LOG" --drive="$DRIVE_REPOSITORY" --repository="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="${INFO_FILE}" --keep="$KEEP"  || fail
-            ;;
-        rclone)
-            $YUNO_ARCHIVE backup rclone --log="$LOG" --repository="$RCLONE_REPOSITORY" --path="ynh_archives" --name="$BACKUP_NAME" --source="$BACKUP_TMP_DIR" --compress="gzip" --info="${INFO_FILE}" --keep="$KEEP"  || fail
-            ;;
-        *)
-            echo "Unknown method '$METHOD'" >&2
+    local)
+        $YUNO_ARCHIVE backup local \
+            --log="$LOG" \
+            --repository="$LOCAL_REPOSITORY" \
+            --name="$BACKUP_NAME" \
+            --source="$BACKUP_TMP_DIR" \
+            --compress="gzip" \
+            --info="${INFO_FILE}" \
+            --keep="$KEEP" \
+            --hook="${HOOK_FILE}" \
+            "${verbose_option}" ||
             fail
-            ;;
+        ;;
+    drive)
+        $YUNO_ARCHIVE backup drive \
+            --log="$LOG" \
+            --drive="$DRIVE_REPOSITORY" \
+            --repository="ynh_archives" \
+            --name="$BACKUP_NAME" \
+            --source="$BACKUP_TMP_DIR" \
+            --compress="gzip" \
+            --info="${INFO_FILE}" \
+            --keep="$KEEP" \
+            --hook="${HOOK_FILE}" \
+            "${verbose_option}" ||
+            fail
+        ;;
+    rclone)
+        $YUNO_ARCHIVE backup rclone \
+            --log="$LOG" \
+            --repository="$RCLONE_REPOSITORY" \
+            --path="ynh_archives" \
+            --name="$BACKUP_NAME" \
+            --source="$BACKUP_TMP_DIR" \
+            --compress="gzip" \
+            --info="${INFO_FILE}" \
+            --keep="$KEEP" \
+            --hook="${HOOK_FILE}" \
+            "${verbose_option}" ||
+            fail
+        ;;
+    *)
+        echo "Unknown method '$METHOD'" >&2
+        fail
+        ;;
     esac
 
     # To make backup visible on yunohost Backup local menu, we modify name file and add a symbolic link with only tar name
@@ -94,7 +136,7 @@ do_backup() {
         mv "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar.gzip" "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar.gz"
         ln -sfn "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar.gz" "${LOCAL_REPOSITORY}/${BACKUP_NAME}.tar"
     fi
-    
+
     yunohost app setting "__APP__" state -v "successful"
     return 0
 }
@@ -104,18 +146,18 @@ do_backup() {
 #=========================================================#
 
 case "$1" in
-    need_mount)
-        do_need_mount
-        ;;
-    mount)
-        do_mount
-        ;;
-    backup)
-        do_backup
-        ;;
-    *)
-        echo "hook __APP__ called with unknown argument \`$1'" >&2
-        exit 1
+need_mount)
+    do_need_mount
+    ;;
+mount)
+    do_mount
+    ;;
+backup)
+    do_backup
+    ;;
+*)
+    echo "hook __APP__ called with unknown argument \`$1'" >&2
+    exit 1
     ;;
 esac
 
