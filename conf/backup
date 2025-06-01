@@ -14,6 +14,8 @@ declare -r SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
 ERRORS=""
 # If we force execution (without checking already script executing)
 FORCE=false
+# Verbose flag 1 = true, 0 = false
+VERBOSE="1"
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #
@@ -23,20 +25,20 @@ FORCE=false
 # Get hook scripts for backuing up conf or data app
 # ARGUMENTS:
 #   $1 (string) hook type. Can be : app|conf
-# OUTPUTS: 
+# OUTPUTS:
 # 	Print help message to stdout
 ### FUNCTION END
 filter_hooks() {
-    sudo ls /usr/share/yunohost/hooks/backup/ /etc/yunohost/hooks.d/backup/ | grep "\-$1_" | cut -d"-" -f2 | uniq 2>> "$LOG_FILE"
+    sudo ls /usr/share/yunohost/hooks/backup/ /etc/yunohost/hooks.d/backup/ | grep "\-$1_" | cut -d"-" -f2 | uniq 2>>"$LOG_FILE"
 }
 
 ### FUNCTION BEGIN
 # Usage function to show help message
-# OUTPUTS: 
+# OUTPUTS:
 # 	Print help message to stdout
 ### FUNCTION END
 usage() {
-    cat << MSG_USAGE
+    cat <<MSG_USAGE
 Script used to launch Yuno-archive backup according to configuration
 
 Usage  :
@@ -64,14 +66,14 @@ end_script() {
     mailalert="$(sudo yunohost app setting "__APP__" mailalert)"
     msg_log="For more details, consult /var/log/__APP__/backup.log"
 
-    if [[  -n "$ERRORS" && $mailalert != "never" ]]; then
+    if [[ -n "$ERRORS" && $mailalert != "never" ]]; then
         cat <(echo -e "${ERRORS}\n${msg_log}\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ failed onto $method $repository" admins
     elif [ "$mailalert" == "always" ]; then
-        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ succeeded onto $repository" admins < "$LOG_FILE"
+        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ succeeded onto $repository" admins <"$LOG_FILE"
     fi
 
     # restore .nobackup file
-    if [[ -e  /home/yunohost.multimedia/.nobackup_disabled ]]; then
+    if [[ -e /home/yunohost.multimedia/.nobackup_disabled ]]; then
         mv /home/yunohost.multimedia/.nobackup_disabled /home/yunohost.multimedia/.nobackup
     fi
     rm -rf "$LOG_FILE"
@@ -89,9 +91,146 @@ end_script() {
 ### FUNCTION END
 error() {
     local message="$1"
-    
+
     ERRORS+="\n${message}"
     echo "$message" >&2
+}
+
+do_backup() {
+    # system hooks methods setted with configuration
+    declare -a system=()
+
+    # Add system hooks according to configuration
+    local save_system_conf
+    save_system_conf=$(sudo yunohost app setting "__APP__" save_system_conf)
+    if [[ "$save_system_conf" == "1" ]]; then
+        echo "Conf enabled, add to backup script..." | tee -a "$LOG_FILE"
+
+        for hook in $(filter_hooks conf); do
+            system+=("$hook")
+            echo "- Hook '$hook' added" | tee -a "$LOG_FILE"
+        done
+    fi
+
+    # Add data hook according to configuration (without data_multimedia hook)
+    local save_data
+    save_data=$(sudo yunohost app setting "__APP__" save_data)
+    if [[ "$save_data" == "1" ]]; then
+        echo "Data enabled, add to backup script..." | tee -a "$LOG_FILE"
+
+        for hook in $(filter_hooks data | grep -v 'data_multimedia'); do
+            system+=("$hook")
+            echo "- Hook '$hook' added" | tee -a "$LOG_FILE"
+        done
+    fi
+
+    # Add data multimedia according to configuration
+    local save_data_multimedia
+    save_data_multimedia=$(sudo yunohost app setting "__APP__" save_data_multimedia)
+    if [[ "$save_data_multimedia" == "1" ]]; then
+        echo "Data multimedia enabled, add to backup script..." | tee -a "$LOG_FILE"
+        # Disable .nobackup file if exists
+        if [[ -e /home/yunohost.multimedia/.nobackup ]]; then
+            mv /home/yunohost.multimedia/.nobackup /home/yunohost.multimedia/.nobackup_disabled
+        fi
+
+        system+=("data_multimedia")
+        echo "- Hook 'data_multimedia' added" | tee -a "$LOG_FILE"
+    fi
+
+    # Add apps according to configuration
+    declare -a apps=()
+    save_apps=$(sudo yunohost app setting "__APP__" save_apps | tr -d ' ')
+    echo "Add apps to backup script..." | tee -a "$LOG_FILE"
+    for application in $(sudo ls /etc/yunohost/apps/); do
+
+        if ([[ "$save_apps" =~ ^exclude: ]] && grep -wq "$application" <<<"$save_apps") ||
+            ([[ "$save_apps" != "all" ]] && [[ ! "$save_apps" =~ ^exclude: ]] && ! grep -wq "$application" <<<"$save_apps"); then
+            continue
+        fi
+
+        if sudo test ! -f "/etc/yunohost/apps/$application/scripts/backup"; then
+            error "[WARN] The application $application has no backup script. This app won't be backed up."
+            continue
+        fi
+
+        apps+=("$application")
+        echo "- App '$application' added'" | tee -a "$LOG_FILE"
+    done
+
+    if [[ ${#apps[@]} -eq 0 && ${#system[@]} -eq 0 ]]; then
+        error "[WARN] apps and system are empty, nothing to save."
+        return 0
+    fi
+    # Define apps option
+    local option_apps=""
+    if [[ ${#apps[@]} -ne 0 ]]; then
+        option_apps=" --apps ${apps[*]}"
+    fi
+
+    # Define system option
+    local option_system=""
+    if [[ ${#system[@]} -ne 0 ]]; then
+        option_system=" --system ${system[*]}"
+    fi
+
+    local current_date
+    current_date=$(date +"%Y%m%d-%H%M%S")
+    echo "yunohost backup create --name '${current_date}___APP__' --method '__APP___app' $option_system $option_apps" | tee -a "$LOG_FILE" 2>&1
+
+    # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
+    local backup_output=""
+    local backup_ret=0
+    backup_output=$(sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps 2>&1)
+    backup_ret=$?
+    # echo whithout colors to log file (for the mail)
+    echo -e "$backup_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' | tee -a "$LOG_FILE"
+    echo -e "$backup_output"
+    return $backup_ret
+}
+
+do_send() {
+    local method="$1"
+
+    local log='/var/log/__APP__/backup.log'
+    local local_repository="/home/yunohost.backup/archives"
+    local drive_repository
+    drive_repository=$(yunohost app setting "__APP__" drive_repository)
+    local rclone_repository
+    rclone_repository=$(yunohost app setting "__APP__" rclone_repository)
+    declare -r yuno_archive='__INSTALL_DIR__/yuno-archive.sh'
+
+    local verbose_option=""
+    if [[ $VERBOSE == "1" ]]; then
+        verbose_option="--verbose"
+    fi
+
+    local backup_output=""
+    local backup_ret=0
+
+    case "$method" in
+    drive)
+        echo "$yuno_archive send '$method' --source='$local_repository' --drive='$drive_repository' --repository='ynh_archives' --log='$log' $verbose_option" | tee -a "$LOG_FILE" 2>&1
+        # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
+        backup_output=$(sudo $yuno_archive send "$method" --source="$local_repository" --drive="$drive_repository" --repository="ynh_archives" --log="$log" $verbose_option 2>&1)
+        backup_ret=$?
+        ;;
+    rclone)
+        echo "$yuno_archive send '$method' --source='$local_repository' --repository='$rclone_repository' --path='ynh_archives' --log='$log' $verbose_option" | tee -a "$LOG_FILE" 2>&1
+        # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
+        backup_output=$(sudo $yuno_archive send "$method" --source="$local_repository" --repository="$rclone_repository" --path="ynh_archives" --log="$log" $verbose_option 2>&1)
+        backup_ret=$?
+        ;;
+    *)
+        error "[ERROR] Cannot send archive, method '$method' unknown."
+        return 1
+        ;;
+    esac
+
+    # echo whithout colors to log file (for the mail)
+    echo -e "$backup_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' | tee -a "$LOG_FILE"
+    echo -e "$backup_output"
+    return $backup_ret
 }
 
 #=========================================================#
@@ -102,17 +241,18 @@ while getopts "fh" option; do
     h)
         usage
         exit 0
-      ;;
+        ;;
     f)
         FORCE=true
-      ;;
+        ;;
     *)
         usage
         exit 1
-   esac
+        ;;
+    esac
 done
 
-state=$(yunohost app setting "__APP__" state)
+state=$(sudo yunohost app setting "__APP__" state)
 
 if [[ ! $FORCE && ($state == "ongoing" || $state == "updating") ]]; then
     error "[ERROR] There is another backup process running or app in updating state. Abord.\nIf the problem persist after reboot, call '$SCRIPT_PATH' with -f option"
@@ -123,99 +263,25 @@ now="$(date "+%Y-%m-%d %H:%M:%S")"
 echo "${now} STARTING BACKUP __APP__" | tee -a "$LOG_FILE"
 
 # Add a line to yuno-archive log file (different from this script $LOG_FILE which is a temp log file for mail)
-sudo echo "${now} STARTING BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" > /dev/null
+sudo echo "${now} STARTING BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" >/dev/null
 
-# system hooks methods setted with configuration
-declare -a system=()
+method=$(sudo yunohost app setting "__APP__" method)
 
-# Add system hooks according to configuration
-save_system_conf=$(sudo yunohost app setting "__APP__" save_system_conf)
-if [[ "$save_system_conf" == "1" ]]; then
-    echo "Conf enabled, add to backup script..." | tee -a "$LOG_FILE"
-
-    for hook in $(filter_hooks conf); do
-        system+=("$hook")
-        echo "- Hook '$hook' added" | tee -a "$LOG_FILE"
-    done
-fi
-
-# Add data hook according to configuration (without data_multimedia hook)
-save_data=$(sudo yunohost app setting "__APP__" save_data)
-if [[ "$save_data" == "1" ]]; then
-    echo "Data enabled, add to backup script..." | tee -a "$LOG_FILE"
-
-    for hook in $(filter_hooks data | grep -v 'data_multimedia'); do
-        system+=("$hook")
-        echo "- Hook '$hook' added" | tee -a "$LOG_FILE"
-    done
-fi
-
-# Add data multimedia according to configuration
-save_data_multimedia=$(sudo yunohost app setting "__APP__" save_data_multimedia)
-if [[ "$save_data_multimedia" == "1" ]]; then
-    echo "Data multimedia enabled, add to backup script..." | tee -a "$LOG_FILE"
-    # Disable .nobackup file if exists
-    if [[ -e  /home/yunohost.multimedia/.nobackup ]]; then
-        mv /home/yunohost.multimedia/.nobackup /home/yunohost.multimedia/.nobackup_disabled
-    fi
-
-    system+=("data_multimedia")
-    echo "- Hook 'data_multimedia' added" | tee -a "$LOG_FILE"
-fi
-
-# Add apps according to configuration
-declare -a apps=()
-save_apps=$(sudo yunohost app setting "__APP__" save_apps | tr -d ' ')
-echo "Add apps to backup script..." | tee -a "$LOG_FILE"
-for application in $(sudo ls /etc/yunohost/apps/); do
-
-    if ( [[ "$save_apps" =~ ^exclude: ]] && grep -wq "$application" <<< "$save_apps" ) ||
-       ( [[ "$save_apps" != "all" ]] && [[ ! "$save_apps" =~ ^exclude: ]]  && ! grep -wq "$application" <<< "$save_apps" );
-    then
-        continue
-    fi
-
-    if sudo test ! -f "/etc/yunohost/apps/$application/scripts/backup" ; then
-        error "[WARN] The application $application has no backup script. This app won't be backed up."
-        continue
-    fi
-
-    apps+=("$application")
-    echo "- App '$application' added'" | tee -a "$LOG_FILE"
-done
-
-if [[ ${#apps[@]} -eq 0 && ${#system[@]} -eq 0 ]]; then
-    error "[WARN] apps and system are empty, nothing to save."
-else
-    # Define apps option
-    option_apps=""
-    if [[ ${#apps[@]} -ne 0 ]]; then
-        option_apps=" --apps ${apps[*]}"
-    fi
-
-    # Define system option
-    option_system=""
-    if [[ ${#system[@]} -ne 0 ]]; then
-        option_system=" --system ${system[*]}"
-    fi
-
-    current_date=$(date +"%Y%m%d-%H%M%S")
-    echo "yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps" | tee -a "$LOG_FILE" 2>&1
-   
-    # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
-    backup_output=$(sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps 2>&1)
-    backup_ret=$?
-    # echo whitout colors to log file (for the mail)
-    echo -e "$backup_output"  | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' >> "$LOG_FILE"
-    echo -e "$backup_output"
-    if [[ $backup_ret -ne 0 ]]; then
-        error "[ERROR] The backup miserably failed to backup."
-    fi
-fi
+case "$method" in
+send_to_drive)
+    do_send drive
+    ;;
+send_to_rclone)
+    do_send rclone
+    ;;
+*)
+    do_backup
+    ;;
+esac
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
 echo "${now} END BACKUP __APP__" | tee -a "$LOG_FILE"
 # Add a line to yuno-archive log file (different from this script $LOG_FILE which is a temp log file for mail)
-sudo echo "${now} END BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" > /dev/null
+sudo echo "${now} END BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" >/dev/null
 
 end_script

@@ -117,10 +117,10 @@ get__last_backups() {
     local)
         fetch_local_backups "$local_repository"
         ;;
-    drive)
+    drive | send_to_drive)
         fetch_drive_backups "$drive_repository"
         ;;
-    rclone)
+    rclone | send_to_rclone)
         fetch_rclone_backups "$rclone_repository"
         ;;
     *)

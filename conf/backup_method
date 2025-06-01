@@ -45,6 +45,7 @@ RCLONE_REPOSITORY=$(yunohost app setting "__APP__" rclone_repository)
 METHOD=$(yunohost app setting "__APP__" method)
 KEEP=$(yunohost app setting "__APP__" keep)
 
+# Verbose flag 1 = true, 0 = false
 VERBOSE="1"
 
 #=========================================================#
@@ -97,7 +98,8 @@ do_backup() {
             "${verbose_option}" ||
             fail
         ;;
-    drive)
+    # We won't fail with send_to_drive method because this methode could be called directly in command line
+    drive | send_to_drive)
         $YUNO_ARCHIVE backup drive \
             --log="$LOG" \
             --drive="$DRIVE_REPOSITORY" \
@@ -111,7 +113,8 @@ do_backup() {
             "${verbose_option}" ||
             fail
         ;;
-    rclone)
+    # We won't fail with send_to_drive method because this methode could be called directly in command line
+    rclone | send_to_rclone)
         $YUNO_ARCHIVE backup rclone \
             --log="$LOG" \
             --repository="$RCLONE_REPOSITORY" \

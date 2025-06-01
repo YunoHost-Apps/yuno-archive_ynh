@@ -38,8 +38,10 @@ services = []
         choices.local = "Local filesystem"
         choices.drive = "External drive"
         choices.rclone = "Rclone"
-        help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository."
-        help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré."
+        choices.send_to_drive = "Send to external drive"
+        choices.send_to_rclone = "Send to Rclone"
+        help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository.<br>**Send to external drive** Only send archives from YunoHost's local backups directory to an external drive. (no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured Rclone repository.(no new backup created)"
+        help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré.<br>**Send to external drive** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un disque externe. (aucune nouvelle sauvegarde créée)<br>**Send to Rclone** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt Rclone configuré. (aucune nouvelle sauvegarde créée)"
 
         [main.general.local_repository]
         ask.en = "Local directory"
@@ -52,7 +54,7 @@ services = []
         [main.general.drive_repository]
         ask.en = "Drive partition"
         ask.fr = "Partition sur un disque"
-        visible = "!ynh_repo && method == 'drive'"
+        visible = "!ynh_repo && ( method == 'drive' || method == 'send_to_drive' )"
         type = "string"
         help.en = "Enter a partition on a hard drive (e.g. /dev/sdb1).\n**Do not choose a system partition!** (it will be unmounted and then mounted during the backup)\nThe archives will be stored in the **ynh_archives** subdirectory."
         help.fr = "Saisir une partition sur un disque dur (ex : /dev/sdb1).\n**Ne pas choisir une partition du système !** (elle sera démontée puis montée durant le backup)\nLes archives seront stockées dans le sous-répertoire **ynh_archives**."
@@ -60,21 +62,21 @@ services = []
         [main.general.mounted_drive]
         ask.en  = "Mounted drive verification (You should save before)..."
         ask.fr  = "Vérification du point de montage du lecteur (Vous devez sauvegarder avant)..."
-        visible = "!ynh_repo && method == 'drive' && drive_repository != ''"
+        visible = "!ynh_repo && ( method == 'drive' || method == 'send_to_drive' ) && drive_repository != ''"
         type = "alert"
         style = "info"
 
         [main.general.rclone_repository]
         ask.en = "Rclone repo"
         ask.fr = "Dépôt Rclone"
-        visible = "!ynh_repo && method == 'rclone'"
+        visible = "!ynh_repo && ( method == 'rclone' || method == 'send_to_rclone' )"
         type = "string"
         help.en = "Enter a configured Rclone repository (e.g. pcloud-repo) without the trailing ':'.\nThe archives will be stored in the **ynh_archives** subdirectory."
         help.fr = "Saisir le nom d'un dépôt (repo) Rclone configuré (ex: pcloud-repo) sans les ':' à la fin.\nLes archives seront stockées dans le sous-répertoire **ynh_archives**."
 
         [main.general.rclone_version]
         ask = "Rclone version: {{rclone_version}}"
-        visible = "!ynh_repo && method == 'rclone'"
+        visible = "!ynh_repo && ( method == 'rclone' || method == 'send_to_rclone' )"
         type = "alert"
         style = "info"
 
@@ -99,13 +101,15 @@ services = []
         [main.general.keep]
         ask.en = "How many backups do you want to keep ?"
         ask.fr = "Combien de sauvegarde souhaitez-vous conserver ?"
+        visible = "method != 'send_to_rclone' && method != 'send_to_drive'"
         help.en = "Enter `all` to keep all archives for each backup.<br>Enter an integer between `0 and n` to delete old archives if space is needed (`0` can delete everything, `n` will keep at least `n`)"
-        help.fr = "Saisir `all` pour conserver toutes les archives à cahque sauvegarde.<br>Saisir un entier entre `0 et n` pour supprimer les anciennes archives si on a besoin de place (`0` peut tout supprimer, `n` en conservera minimum `n`)"
+        help.fr = "Saisir `all` pour conserver toutes les archives à chaque sauvegarde.<br>Saisir un entier entre `0 et n` pour supprimer les anciennes archives si on a besoin de place (`0` peut tout supprimer, `n` en conservera minimum `n`)"
         type = "string"
         
     [main.content]
     name.en = "What should be backed up?"
     name.fr = "Qu'est ce qui devrait être sauvegardé ?"
+    visible = "method != 'send_to_rclone' && method != 'send_to_drive'"
     optional = false
 
         [main.content.save_system_conf]
