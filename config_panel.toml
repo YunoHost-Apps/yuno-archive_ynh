@@ -23,11 +23,11 @@ services = []
         style = "info"
 
         [main.general.ynh_repo]
-        ask.en = "Use Yunohost default repository"
-        ask.fr = "Utiliser le dépôt par défaut de Yunohost"
+        ask.en = "Use YunoHost default repository"
+        ask.fr = "Utiliser le dépôt par défaut de YunoHost"
         type = "boolean"
-        help.en = "`Yes` Backups will be stored in Yunohost's local backups directory and will be visible in the backups menu.<br>`No` You must configure the method and repository."
-        help.fr = "`Oui` Les sauvegardes seront stockées dans le répertoire des sauvegardes locales de Yunohost et seront visibles dans le menu des sauvegardes.<br>`Non` Vous devez configurer la méthode et le dépot."
+        help.en = "`Yes` Backups will be stored in YunoHost's local backups directory and will be visible in the backups menu.<br>`No` You must configure the method and repository."
+        help.fr = "`Oui` Les sauvegardes seront stockées dans le répertoire des sauvegardes locales de YunoHost et seront visibles dans le menu des sauvegardes.<br>`Non` Vous devez configurer la méthode et le dépot."
 
 
         [main.general.method]
@@ -89,8 +89,8 @@ services = []
         bind = "OnCalendar:/etc/systemd/system/__APP__.timer"
         
         [main.general.mailalert]
-        ask.en = "Mail alert"
-        ask.fr = "Alerte par mail"
+        ask.en = "Email alert"
+        ask.fr = "Alerte par e-mail"
         type = "select"
         choices.always = "Always"
         choices.errors_only = "Only if an error occured"
@@ -99,7 +99,7 @@ services = []
         help.fr = "Les alertes sont envoyés aux membres du groupe admins"
 
         [main.general.keep]
-        ask.en = "How many backups do you want to keep ?"
+        ask.en = "How many backups do you want to keep?"
         ask.fr = "Combien de sauvegarde souhaitez-vous conserver ?"
         visible = "method != 'send_to_rclone' && method != 'send_to_drive'"
         help.en = "Enter `all` to keep all archives for each backup.<br>Enter an integer between `0 and n` to delete old archives if space is needed (`0` can delete everything, `n` will keep at least `n`)"
