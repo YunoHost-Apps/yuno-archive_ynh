@@ -7,7 +7,7 @@ This is a basic application that sends the contents of a compressed folder to an
 
 ### Features
 
-- Choose the backup target (local Yunohost archives, external drive, rclone repository)
+- Choose the backup target (local YunoHost archives, external drive, Rclone repository)
 - Schedule backups at regular intervals
 - Choose the items and applications to back up
 - Send email alerts at the end of the backup

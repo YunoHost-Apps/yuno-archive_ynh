@@ -1,6 +1,6 @@
 ## Local Archives
 
-When choosing a local backup, you can specify the Yunohost archive directory (default option). In this case, the archives will be visible in the Backups section of the administration panel. This option simply ensures that a backup will be performed at regular intervals.
+When choosing a local backup, you can specify the YunoHost archive directory (default option). In this case, the archives will be visible in the Backups section of the administration panel. This option simply ensures that a backup will be performed at regular intervals.
 
 You can also specify a custom local directory.
 **Warning: This directory will be used as is once it exists. Make sure that this directory contains only backup archives!**
