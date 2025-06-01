@@ -1,8 +1,6 @@
 #!/bin/bash
 
 #=================================================
-# GENERIC START
-#=================================================
 # IMPORT GENERIC HELPERS
 #=================================================
 
@@ -41,10 +39,9 @@ ynh_script_progression "Setting up source files..."
 
 # Download, check integrity, uncompress and patch the source from manifest.toml
 ynh_setup_source --dest_dir="$install_dir"
+
 chmod ug+rx "$install_dir/yuno-archive.sh"
 
-#=================================================
-# SPECIFIC SETUP
 #=================================================
 # SETUP THE BACKUP METHOD
 #=================================================
@@ -58,7 +55,6 @@ chmod go=--- "/etc/yunohost/hooks.d/backup_method/10-${app}_app"
 #=================================================
 # INSTALL BACKUP SERVICE SCRIPT
 #=================================================
-
 ynh_script_progression "Setting up backup service script..."
 
 ynh_config_add --template="backup" --destination="$install_dir/backup"

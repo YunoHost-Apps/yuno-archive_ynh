@@ -16,7 +16,7 @@ license = "AGPL-3.0-only"
 code = "https://github.com/Mistermasque/yuno-archive"
 
 [integration]
-yunohost = ">= 12.0.0"
+yunohost = ">= 12.0.9"
 helpers_version = "2.1"
 architectures = "all"
 multi_instance = true

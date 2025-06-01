@@ -1,16 +1,12 @@
 #!/bin/bash
 
 #=================================================
-# GENERIC START
-#=================================================
 # IMPORT GENERIC HELPERS
 #=================================================
 
 source _common.sh
 source /usr/share/yunohost/helpers
 
-#=================================================
-# STANDARD UPGRADE STEPS
 #=================================================
 # STOP SYSTEMD SERVICE
 #=================================================
@@ -34,6 +30,7 @@ ynh_app_setting_set_default --key=debug --value=0
 ynh_script_progression "Upgrading source files..."
 
 ynh_setup_source --dest_dir="$install_dir" --full_replace
+
 chmod ug+rx "$install_dir/yuno-archive.sh"
 
 #=================================================
@@ -93,7 +90,6 @@ chmod u+w "/var/log/$app"
 #=================================================
 # START SYSTEMD SERVICE
 #=================================================
-
 ynh_script_progression "Starting $app's systemd service..."
 
 ynh_systemctl --service="$app.timer" --action="start"
