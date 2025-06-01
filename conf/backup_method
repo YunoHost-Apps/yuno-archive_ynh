@@ -46,7 +46,7 @@ METHOD=$(yunohost app setting "__APP__" method)
 KEEP=$(yunohost app setting "__APP__" keep)
 
 # Verbose flag 1 = true, 0 = false
-VERBOSE="1"
+VERBOSE=$(yunohost app setting "__APP__" debug)
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #

@@ -26,6 +26,7 @@ ynh_script_progression "Ensuring downward compatibility..."
 
 ynh_app_setting_set --key="state" --value="updating"
 ynh_app_setting_set --key="last_run" --value="-"
+ynh_app_setting_set_default --key=debug --value=0
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE

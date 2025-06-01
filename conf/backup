@@ -15,7 +15,7 @@ ERRORS=""
 # If we force execution (without checking already script executing)
 FORCE=false
 # Verbose flag 1 = true, 0 = false
-VERBOSE="1"
+VERBOSE=$(sudo yunohost app setting "__APP__" debug)
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #

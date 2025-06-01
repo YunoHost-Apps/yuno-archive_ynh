@@ -25,6 +25,7 @@ ynh_app_setting_set --key=drive_repository --value=""
 ynh_app_setting_set --key=rclone_repository --value=""
 ynh_app_setting_set --key=save_system_conf --value="1"
 ynh_app_setting_set --key=save_data_multimedia --value="0"
+ynh_app_setting_set --key=debug --value="0"
 
 #=================================================
 # INSTALL RCLONE

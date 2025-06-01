@@ -105,6 +105,14 @@ services = []
         help.en = "Enter `all` to keep all archives for each backup.<br>Enter an integer between `0 and n` to delete old archives if space is needed (`0` can delete everything, `n` will keep at least `n`)"
         help.fr = "Saisir `all` pour conserver toutes les archives à chaque sauvegarde.<br>Saisir un entier entre `0 et n` pour supprimer les anciennes archives si on a besoin de place (`0` peut tout supprimer, `n` en conservera minimum `n`)"
         type = "string"
+
+        [main.general.debug]
+        ask.en = "Debug mode"
+        ask.fr = "Mode debug"
+        type = "boolean"
+        help.en = "Enable debug mode to get more information in the logs. It is recommended to enable it only if you have a problem."
+        help.fr = "Activer le mode debug pour obtenir plus d'informations dans les logs. Il est recommandé de l'activer uniquement si vous avez un problème."
+        
         
     [main.content]
     name.en = "What should be backed up?"
