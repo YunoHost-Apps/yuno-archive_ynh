@@ -1,6 +1,6 @@
 ## Archives Locales
 
-Dans le choix d'une sauvegarde locale, vous pouvez spécifier le répertoire des archives de Yunohost (choix par défaut). Dans ce cas, les archives seront visibles dans le menu sauvegardes du menu d'administration. Ce choix permet simplement de s'assurer qu'une sauvegarde sera réalisée à intervales réguliers.
+Dans le choix d'une sauvegarde locale, vous pouvez spécifier le répertoire des archives de YunoHost (choix par défaut). Dans ce cas, les archives seront visibles dans le menu sauvegardes du menu d'administration. Ce choix permet simplement de s'assurer qu'une sauvegarde sera réalisée à intervales réguliers.
 
 Vous pouvez aussi spécifier un répertoire local.
 **Attention** :  ce répertoire sera utilisé tel quel à pertir du moment où il existe. Assurez-vous que ce répertoire ne contienne que des archives !
@@ -10,7 +10,7 @@ Vous pouvez aussi spécifier un répertoire local.
 Ce mode vous permet de brancher un disque externe et reconnu par le système (ex : /dev/sde1).
 Vous devez spécifier la partition du disque dur (ex : /dev/sde1) et non le disque en entier (ex: /dev/sde)
 
-Assurez-vous que c'est le bon disque dur en vous connectant en ssh et vérifiant le contenu du disque avec ces commandes :
+Assurez-vous que c'est le bon disque dur en vous connectant en SSH et vérifiant le contenu du disque avec ces commandes :
 
 ```bash
 sudo mkdir /mnt/test
@@ -62,13 +62,13 @@ Sources :
 
 ### Archive vers Rclone
 
-[Rclone](https://rclone.org/docs/) offre l'énorme avantage de supporter de nombreux services de stockages tel que Gooel Drive, Pcloud, AWS, etc.
+[Rclone](https://rclone.org/docs/) offre l'énorme avantage de supporter de nombreux services de stockages tel que Google Drive, Pcloud, AWS, etc.
 Avant de l'utiliser, assurez-vous qu'il est correctement configuré avec la commande :
 ```bash
 sudo rclone config
 ```
 
-Pour mettre à jour Rclone:
+Pour mettre à jour Rclone :
 ```bash
 sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ```

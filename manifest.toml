@@ -4,10 +4,10 @@ packaging_format = 2
 
 id = "yuno-archive"
 name = "Yuno Archive"
-description.en = "Extend functionnality of built-in yunohost backup system."
-description.fr = "Étend les fonctionnalités du backup fourni par Yunohost en permettant la sauvegarde auto à intervales régulières et l'envoi sur distant via rclone."
+description.en = "Extend functionnality of built-in yunoHost backup system"
+description.fr = "Étend les fonctionnalités du backup fourni par YunoHost en permettant la sauvegarde auto à intervales régulières et l'envoi sur distant via Rclone"
 
-version = "0.3.1~ynh2"
+version = "0.3.1~ynh1"
 
 maintainers = ["Mistermasque"]
 
@@ -15,14 +15,15 @@ maintainers = ["Mistermasque"]
 license = "AGPL-3.0-only"
 code = "https://github.com/Mistermasque/yuno-archive"
 
-
 [integration]
-yunohost = ">= 12.0.0"
+yunohost = ">= 12.0.9"
 helpers_version = "2.1"
 architectures = "all"
 multi_instance = true
+
 ldap = "not_relevant"
 sso = "not_relevant"
+
 disk = "50M"
 ram.build = "500M"
 ram.runtime = "50M"
@@ -50,8 +51,8 @@ ram.runtime = "50M"
     default = "Daily"
 
     [install.mailalert]
-    ask.en = "Do you want admin to receive mail notifications on backups?"
-    ask.fr = "Souhaitez-vous que les administrateurs reçoivent des notifications par mail à chaque sauvegarde ?"
+    ask.en = "Do you want admin to receive email notifications on backups?"
+    ask.fr = "Souhaitez-vous que les administrateurs reçoivent des notifications par e-mail à chaque sauvegarde ?"
     type = "select"
     choices = ["always", "errors_only", "never"]
     default = "errors_only"
