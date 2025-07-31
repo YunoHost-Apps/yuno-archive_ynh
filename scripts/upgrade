@@ -98,5 +98,6 @@ ynh_systemctl --service="$app.timer" --action="start"
 # END OF SCRIPT
 #=================================================
 # Update state
-ynh_app_setting_set --key="state" --value="not run since last update"
+date=$(date "+%Y-%m-%d %H:%M:%S")
+ynh_app_setting_set --key="state" --value="updated at $date"
 ynh_script_progression "Upgrade of $app completed"
