@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+
+# Script used to send archives directly to a remote repo according to configuration
+# Using yuno_archive script. This script is not called from yunohost backup system
+
+
+# Fail on error
+set -Eeuo pipefail
+
+#=========================================================#
+#                     GLOBAL VARS                         #
+#=========================================================#
+
+# This script
+declare -r THIS_SCRIPT="$(readlink -f "${BASH_SOURCE}")"
+
+# yuno-archive script
+declare -r YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
+
+# log file
+declare -r LOG='/var/log/__APP__/backup.log'
+
+# App config
+LOCAL_REPOSITORY="/home/yunohost.backup/archives"
+DRIVE_REPOSITORY=$(yunohost app setting "__APP__" drive_repository)
+RCLONE_REPOSITORY=$(yunohost app setting "__APP__" rclone_repository)
+METHOD=$(yunohost app setting "__APP__" method)
+
+# Verbose flag 1 = true, 0 = false
+VERBOSE=$(yunohost app setting "__APP__" debug)
+
+#=========================================================#
+#                    SCRIPT FUNCTIONS                     #
+#=========================================================#
+
+fail() {
+    yunohost app setting "__APP__" state -v "failed"
+    exit 1
+}
+
+#=========================================================#
+#                           MAIN                          #
+#=========================================================#
+
+echo "---------- START SENDING FROM ${THIS_SCRIPT} -----------" >> "$LOG"
+
+yunohost app setting "__APP__" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
+yunohost app setting "__APP__" state -v "ongoing"
+
+verbose_option=""
+if [[ $VERBOSE == "1" ]]; then
+    verbose_option="--verbose"
+fi
+
+
+case "$METHOD" in
+send_to_drive)
+    if [[ $VERBOSE == "1" ]]; then
+        echo "$YUNO_ARCHIVE send drive --log='$LOG' --drive='$DRIVE_REPOSITORY' --repository='ynh_archives' --source='$LOCAL_REPOSITORY' ${verbose_option}"
+    fi
+
+    $YUNO_ARCHIVE send drive \
+        --log="$LOG" \
+        --drive="$DRIVE_REPOSITORY" \
+        --repository="ynh_archives" \
+        --source="$LOCAL_REPOSITORY" \
+        "${verbose_option}" ||
+        fail
+    ;;
+send_to_rclone)
+    if [[ $VERBOSE == "1" ]]; then
+        echo "$YUNO_ARCHIVE send rclone --log='$LOG' --repository='$RCLONE_REPOSITORY' --path='ynh_archives' --source='$LOCAL_REPOSITORY' ${verbose_option}"
+    fi
+
+    $YUNO_ARCHIVE send rclone \
+        --log="$LOG" \
+        --repository="$RCLONE_REPOSITORY" \
+        --path="ynh_archives" \
+        --source="$LOCAL_REPOSITORY" \
+        "${verbose_option}" ||
+        fail
+    ;;
+*)
+    echo "Unknown method '$METHOD'" >&2
+    fail
+    ;;
+esac
+
+yunohost app setting "__APP__" state -v "successful"
+
+echo "---------- END SENDING FROM ${THIS_SCRIPT} -----------" >> "$LOG"
+exit 0

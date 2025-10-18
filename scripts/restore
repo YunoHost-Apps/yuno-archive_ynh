@@ -24,6 +24,7 @@ ynh_restore "$install_dir"
 chmod ug+rx "$install_dir/yuno-archive.sh"
 chmod ug+rx "$install_dir/backup"
 chmod ug+rx "$install_dir/backup_hook"
+chmod ug+rx "$install_dir/send"
 
 #=================================================
 # RESTORE BACKUP METHODS

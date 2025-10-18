@@ -65,6 +65,10 @@ ynh_config_add --template="backup_hook" --destination="$install_dir/backup_hook"
 chown "$app:$app" "$install_dir/backup_hook"
 chmod ug+rx "$install_dir/backup_hook"
 
+ynh_config_add --template="send" --destination="$install_dir/send"
+chown "$app:$app" "$install_dir/send"
+chmod ug+rx "$install_dir/send"
+
 ynh_config_add --template="sudoer" --destination="/etc/sudoers.d/$app"
 chown root:root "/etc/sudoers.d/$app"
 

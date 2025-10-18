@@ -9,13 +9,40 @@
 # log file for mail notification
 declare -r LOG_FILE=$(mktemp)
 # Script name
-declare -r SCRIPT_PATH="$(readlink -f "${BASH_SOURCE}")"
+declare -r THIS_SCRIPT="$(readlink -f "${BASH_SOURCE}")"
+# Send script
+declare -r SEND_SCRIPT="__INSTALL_DIR__/send"
+
 # Global to store errors messages for mail
-ERRORS=""
+IS_ERROR=false
 # If we force execution (without checking already script executing)
 FORCE=false
 # Verbose flag 1 = true, 0 = false
 VERBOSE=$(sudo yunohost app setting "__APP__" debug)
+
+# App config
+IS_DEFAULT_REPO=$(yunohost app setting "__APP__" ynh_repo)
+
+LOCAL_REPOSITORY="/home/yunohost.backup/archives"
+if [[ $IS_DEFAULT_REPO == "0" ]]; then
+    LOCAL_REPOSITORY=$(yunohost app setting "__APP__" local_repository)
+fi
+DRIVE_REPOSITORY=$(yunohost app setting "__APP__" drive_repository)
+RCLONE_REPOSITORY=$(yunohost app setting "__APP__" rclone_repository)
+
+METHOD="$(sudo yunohost app setting "__APP__" method)"
+REPOSITORY=''
+case "$METHOD" in
+local)
+    REPOSITORY="$LOCAL_REPOSITORY"
+    ;;
+drive | send_to_drive)
+    REPOSITORY="$DRIVE_REPOSITORY"
+    ;;
+rclone | send_to_rclone)
+    REPOSITORY="$RCLONE_REPOSITORY"
+    ;;
+esac
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #
@@ -53,23 +80,17 @@ MSG_USAGE
 
 ### FUNCTION BEGIN
 # Ending script and send mail according to configuration
-# ARGUMENTS:
-#   $1 (integer) exit value.
 # GLOBALS:
 #   ERRORS
 ### FUNCTION END
-end_script() {
-    exit_value=${1-0}
+send_mail() {
+    local mailalert="$(sudo yunohost app setting "__APP__" mailalert)"
+    local msg_log="For more details, consult /var/log/__APP__/backup.log"
 
-    method="$(sudo yunohost app setting "__APP__" method)"
-    repository="$(sudo yunohost app setting "__APP__" "${method}_repository")"
-    mailalert="$(sudo yunohost app setting "__APP__" mailalert)"
-    msg_log="For more details, consult /var/log/__APP__/backup.log"
-
-    if [[ -n "$ERRORS" && $mailalert != "never" ]]; then
-        cat <(echo -e "${ERRORS}\n${msg_log}\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ failed onto $method $repository" admins
-    elif [ "$mailalert" == "always" ]; then
-        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup __APP__ succeeded onto $repository" admins <"$LOG_FILE"
+    if [[ $IS_ERROR && $mailalert != "never" ]]; then
+        cat <(echo -e "${msg_log}\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $METHOD __APP__ failed onto $REPOSITORY" admins
+    elif [[ $mailalert == "always" ]]; then
+        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $METHOD __APP__ succeeded onto $REPOSITORY" admins <"$LOG_FILE"
     fi
 
     # restore .nobackup file
@@ -77,7 +98,6 @@ end_script() {
         sudo mv /home/yunohost.multimedia/.nobackup_disabled /home/yunohost.multimedia/.nobackup
     fi
     rm -rf "$LOG_FILE"
-    exit $exit_value
 }
 
 ### FUNCTION BEGIN
@@ -91,11 +111,15 @@ end_script() {
 ### FUNCTION END
 error() {
     local message="$1"
-
-    ERRORS+="\n${message}"
-    echo "$message" >&2
+    echo "$message" | tee -a "$LOG_FILE"
+    IS_ERROR=true
 }
 
+### FUNCTION BEGIN
+# Get backup configuration and call yunohost backup hook method to backup
+# all datas according to configuration
+# RETURNS: 0 if OK 1 otherwise
+### FUNCTION END
 do_backup() {
     # system hooks methods setted with configuration
     declare -a system=()
@@ -150,7 +174,7 @@ do_backup() {
         fi
 
         if sudo test ! -f "/etc/yunohost/apps/$application/scripts/backup"; then
-            error "[WARN] The application $application has no backup script. This app won't be backed up."
+            echo "[WARN] The application $application has no backup script. This app won't be backed up." | tee -a "$LOG_FILE"
             continue
         fi
 
@@ -184,52 +208,34 @@ do_backup() {
     backup_output=$(sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" $option_system $option_apps 2>&1)
     backup_ret=$?
     # echo whithout colors to log file (for the mail)
-    echo -e "$backup_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' | tee -a "$LOG_FILE"
+    echo -e "$backup_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' >> "$LOG_FILE"
     echo -e "$backup_output"
+
+    if [[ $backup_ret -eq 1 ]]; then
+        error "[ERROR] Cannot backup archive to $METHOD '$REPOSITORY'"
+    fi
     return $backup_ret
 }
 
+### FUNCTION BEGIN
+# Call send script to execute send method according to configuration
+# RETURNS: 0 if OK 1 otherwise
+### FUNCTION END
 do_send() {
-    local method="$1"
+    echo "$SEND_SCRIPT" | tee -a "$LOG_FILE" 2>&1
 
-    local log='/var/log/__APP__/backup.log'
-    local local_repository="/home/yunohost.backup/archives"
-    local drive_repository
-    drive_repository=$(sudo yunohost app setting "__APP__" drive_repository)
-    local rclone_repository
-    rclone_repository=$(sudo yunohost app setting "__APP__" rclone_repository)
-    declare -r yuno_archive='__INSTALL_DIR__/yuno-archive.sh'
-
-    local verbose_option=""
-    if [[ $VERBOSE == "1" ]]; then
-        verbose_option="--verbose"
-    fi
-
+    # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
     local backup_output=""
     local backup_ret=0
-
-    case "$method" in
-    drive)
-        echo "$yuno_archive send '$method' --source='$local_repository' --drive='$drive_repository' --repository='ynh_archives' --log='$log' $verbose_option" | tee -a "$LOG_FILE" 2>&1
-        # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
-        backup_output=$(sudo $yuno_archive send "$method" --source="$local_repository" --drive="$drive_repository" --repository="ynh_archives" --log="$log" $verbose_option 2>&1)
-        backup_ret=$?
-        ;;
-    rclone)
-        echo "$yuno_archive send '$method' --source='$local_repository' --repository='$rclone_repository' --path='ynh_archives' --log='$log' $verbose_option" | tee -a "$LOG_FILE" 2>&1
-        # We need to execute backup command in a subshell to get return code and output text (althought we have tee return which is always true)
-        backup_output=$(sudo $yuno_archive send "$method" --source="$local_repository" --repository="$rclone_repository" --path="ynh_archives" --log="$log" $verbose_option 2>&1)
-        backup_ret=$?
-        ;;
-    *)
-        error "[ERROR] Cannot send archive, method '$method' unknown."
-        return 1
-        ;;
-    esac
-
+    backup_output=$(sudo $SEND_SCRIPT 2>&1)
+    backup_ret=$?
     # echo whithout colors to log file (for the mail)
-    echo -e "$backup_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' | tee -a "$LOG_FILE"
+    echo -e "$backup_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' >> "$LOG_FILE"
     echo -e "$backup_output"
+
+    if [[ $backup_ret -eq 1 ]]; then
+        error "[ERROR] Cannot send archives to '$REPOSITORY'"
+    fi
     return $backup_ret
 }
 
@@ -298,8 +304,9 @@ done
 # We use FORCE to by pass this check
 if [[ ! $FORCE ]]; then
     if is_updating_or_running; then
-        error "[ERROR] There is another backup process running or app in updating state. Abord.\nIf the problem persist after reboot, call '$SCRIPT_PATH' with -f option"
-        end_script 1
+        error "[ERROR] There is another backup process running or app in updating state. Abord.\nIf the problem persist after reboot, call '$THIS_SCRIPT' with -f option"
+        send_mail
+        exit 1
     fi
 fi
 
@@ -307,17 +314,10 @@ fi
 now="$(date "+%Y-%m-%d %H:%M:%S")"
 echo "${now} STARTING BACKUP __APP__" | tee -a "$LOG_FILE"
 
-# Add a line to yuno-archive log file (different from this script $LOG_FILE which is a temp log file for mail)
-sudo echo "${now} STARTING BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" >/dev/null
 
-method=$(sudo yunohost app setting "__APP__" method)
-
-case "$method" in
-send_to_drive)
-    do_send drive
-    ;;
-send_to_rclone)
-    do_send rclone
+case "$METHOD" in
+send_to_drive | send_to_rclone)
+    do_send
     ;;
 *)
     do_backup
@@ -326,7 +326,5 @@ esac
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
 echo "${now} END BACKUP __APP__" | tee -a "$LOG_FILE"
-# Add a line to yuno-archive log file (different from this script $LOG_FILE which is a temp log file for mail)
-sudo echo "${now} END BACKUP __APP__ from __INSTALL_DIR__/backup script" | tee -a "/var/log/__APP__/backup.log" >/dev/null
 
-end_script
+send_mail

@@ -6,6 +6,9 @@ set -Eeuo pipefail
 #                     GLOBAL VARS                         #
 #=========================================================#
 
+# This script
+declare -r THIS_SCRIPT="$(readlink -f "${BASH_SOURCE}")"
+
 # yuno-archive script
 declare -r YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
 
@@ -67,7 +70,7 @@ do_mount() {
 
 do_backup() {
 
-    echo "---------- BEGIN BACKUP ${BACKUP_NAME} ${METHOD} -----------"
+    echo "---------- BEGIN BACKUP ${BACKUP_NAME} ${METHOD} FROM ${THIS_SCRIPT} -----------" | tee -a "$LOG"
 
     yunohost app setting "__APP__" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
     yunohost app setting "__APP__" state -v "ongoing"
@@ -75,7 +78,7 @@ do_backup() {
     local available_space_in_temp
     available_space_in_temp=$(findmnt --target "$YARCH_TMPDIR" --output AVAIL --bytes --noheadings --first-only)
     if [[ $BACKUP_SIZE -gt $available_space_in_temp ]]; then
-        echo "ERROR : Not enough space to create temp archive (space neeeded = $(hrb "${BACKUP_SIZE}") available space in temp ($YARCH_TMPDIR) = $(hrb "${available_space_in_temp}"))" >&2
+        echo "ERROR : Not enough space to create temp archive (space needed = $(hrb "${BACKUP_SIZE}") available space in temp ($YARCH_TMPDIR) = $(hrb "${available_space_in_temp}"))" >&2
         fail
     fi
 
@@ -98,7 +101,7 @@ do_backup() {
             "${verbose_option}" ||
             fail
         ;;
-    # We won't fail with send_to_drive method because this methode could be called directly in command line
+    # We won't fail with send_to_drive method because this method could be called directly in command line
     drive | send_to_drive)
         $YUNO_ARCHIVE backup drive \
             --log="$LOG" \
@@ -113,7 +116,7 @@ do_backup() {
             "${verbose_option}" ||
             fail
         ;;
-    # We won't fail with send_to_drive method because this methode could be called directly in command line
+    # We won't fail with send_to_drive method because this method could be called directly in command line
     rclone | send_to_rclone)
         $YUNO_ARCHIVE backup rclone \
             --log="$LOG" \
@@ -141,6 +144,7 @@ do_backup() {
     fi
 
     yunohost app setting "__APP__" state -v "successful"
+    echo "---------- END BACKUP ${BACKUP_NAME} ${METHOD} FROM ${THIS_SCRIPT} -----------" | tee -a "$LOG"
     return 0
 }
 
