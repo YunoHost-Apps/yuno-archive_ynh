@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+# This script is called by the systemd service to launch backup or send according to configuration
+

@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+
+# Helpers functions for script launched by systemd
+
+
+#=========================================================#
+#                     GLOBAL VARS                         #
+#=========================================================#
+
+# log file for mail notification
+declare -r LOG_FILE=$(mktemp)
+
+
+#=========================================================#
+#                    SCRIPT FUNCTIONS                     #
+#=========================================================#
+
+log() {
+    local message="$1"
+    echo "$message" | tee -a "$LOG_FILE"
+}
+
+log_error() {
+    local message="$1" >&2
+    echo "$message" | tee -a "$LOG_FILE"
+}
+
+fail() {
+    local message="$1"
+
+    [[ -n $message ]] && log_error "$message"
+    yunohost app setting "__APP__" state -v "failed"
+    exit 1
+
+}
+
+get_conf_method() {
+    # Store value in variable to avoid calling conf multiple times
+    declare -g _CONF_METHOD
+
+    if [[ -z $_CONF_METHOD ]]; then
+        _CONF_METHOD=$(sudo yunohost app setting "__APP__" method)
+    fi
+
+    case "$_CONF_METHOD" in
+    local | drive | send_to_drive | rclone | send_to_rclone)
+        echo "$_CONF_METHOD"
+        ;;
+    *)
+        fail "Method '$_CONF_METHOD' from configuration unknown"
+    esac
+
+    echo "$_CONF_METHOD"
+}
+
+
+# Get repository stored in conf
+get_conf_repository() {
+    # Store value in variable to avoid calling conf multiple times
+    declare -g _CONF_REPOSITORY
+
+    if [[ -n $_CONF_REPOSITORY ]]; then
+        echo "$_CONF_REPOSITORY"
+        return
+    fi
+
+    case $( get_conf_method ) in
+    local)
+        local is_default_repo=""
+        is_default_repo=$(sudo yunohost app setting "__APP__" ynh_repo)
+        if [[ $is_default_repo == "0" ]]; then
+            _CONF_REPOSITORY=$(sudo yunohost app setting "__APP__" local_repository)
+        else
+            _CONF_REPOSITORY="/home/yunohost.backup/archives"
+        fi
+        ;;
+    drive | send_to_drive)
+        _CONF_REPOSITORY=$(sudo yunohost app setting "__APP__" drive_repository)
+        ;;
+    rclone | send_to_rclone)
+        _CONF_REPOSITORY=$(sudo yunohost app setting "__APP__" rclone_repository)
+        ;;
+    esac
+
+    echo "$_CONF_REPOSITORY"
+}
