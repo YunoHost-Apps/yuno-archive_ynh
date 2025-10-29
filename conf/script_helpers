@@ -1,0 +1,236 @@
+#!/usr/bin/env bash
+
+# Helpers functions for script launched by systemd
+
+
+#=========================================================#
+#                     GLOBAL VARS                         #
+#=========================================================#
+
+# log file for mail notification
+MAIL_LOG_FILE=$(mktemp)
+readonly MAIL_LOG_FILE
+# Log file used by yuno-archive script
+readonly YUNO-ARCHIVE_LOG_FILE='/var/log/__APP__/backup.log'
+
+#=========================================================#
+#                    SCRIPT FUNCTIONS                     #
+#=========================================================#
+
+log() {
+    local message="$1"
+    echo "$message" | tee -a "$MAIL_LOG_FILE"
+}
+
+log_error() {
+    local message="$1"
+    echo "$message" | tee -a "$MAIL_LOG_FILE"
+    set_error
+}
+
+set_error() {
+    # Global flag to set if is error or not
+    declare -g _IS_ERROR
+
+    if [[ -z $_IS_ERROR ]]; then
+        _IS_ERROR=true
+    fi
+}
+
+is_error() {
+    if [[ -z $_IS_ERROR  || ! $_IS_ERROR ]]; then
+        return 1
+    fi
+
+    return 1
+}
+
+fail() {
+    set_conf state failed
+    exit 1
+
+}
+
+get_conf() {
+    local var_name="$1"
+
+    if [[ -z $var_name ]]; then
+        log_error "get_conf: var_name cannot be empty"
+        fail
+    fi
+
+    sudo yunohost app setting "__APP__" "$var_name"
+}
+
+set_conf() {
+    local var_name="$1"
+    local value="$2"
+
+    if [[ -z $var_name || -z $value ]]; then
+        log_error "get_conf: var_name '$var_name' or value '$value' cannot be empty"
+        fail
+    fi
+
+    sudo yunohost app setting "__APP__" "$var_name" -v "$value"
+}
+
+get_conf_method() {
+    # Store value in variable to avoid calling conf multiple times
+    declare -g _CONF_METHOD
+
+    if [[ -z $_CONF_METHOD ]]; then
+        _CONF_METHOD=$(get_conf method)
+    fi
+
+    case "$_CONF_METHOD" in
+    local | drive | send_to_drive | rclone | send_to_rclone)
+        echo "$_CONF_METHOD"
+        ;;
+    *)
+        log_error "get_conf_method: Method '$_CONF_METHOD' from configuration unknown"
+        fail
+    esac
+
+    echo "$_CONF_METHOD"
+}
+
+
+# Get repository stored in conf
+get_conf_repository() {
+    # Store value in variable to avoid calling conf multiple times
+    declare -g _CONF_REPOSITORY
+
+    if [[ -n $_CONF_REPOSITORY ]]; then
+        echo "$_CONF_REPOSITORY"
+        return
+    fi
+
+    case $( get_conf_method ) in
+    local)
+        local is_default_repo=""
+        is_default_repo=$(get_conf ynh_repo)
+        if [[ $is_default_repo == "0" ]]; then
+            _CONF_REPOSITORY=$(get_conf local_repository)
+        else
+            # Default yunohost archive repository
+            _CONF_REPOSITORY="/home/yunohost.backup/archives"
+        fi
+        ;;
+    drive | send_to_drive)
+        _CONF_REPOSITORY=$(get_conf drive_repository)
+        ;;
+    rclone | send_to_rclone)
+        _CONF_REPOSITORY=$(get_conf rclone_repository)
+        ;;
+    esac
+
+    echo "$_CONF_REPOSITORY"
+}
+
+
+send_mail() {
+    local mailalert="never"
+    mailalert=$(get_conf mailalert)
+    local msg_log="For more details, consult '${YUNO-ARCHIVE_LOG_FILE}'"
+
+    local repository="unknown"
+    repository=$(get_conf_repository)
+
+    local method="unknown"
+    method=$(get_conf_method)
+
+    if [[ $IS_ERROR && $mailalert != "never" ]]; then
+        cat <(echo -e "${msg_log}\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ failed onto $repository" admins
+    elif [[ $mailalert == "always" ]]; then
+        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ succeeded onto $repository" admins <"$LOG_FILE"
+    fi
+
+    rm -rf "$LOG_FILE"
+}
+
+### FUNCTION BEGIN
+# Get hook scripts for backuping up conf or data app
+# ARGUMENTS:
+#   $1 (string) hook type. Can be : app|conf
+# OUTPUTS:
+# 	Print help message to stdout
+### FUNCTION END
+filter_hooks() {
+    local hook_type="$1"
+
+    if [[ $hook_type != 'conf' || $hook_type != 'data' ]]; then
+        log_error "filter_hooks: hook-type '$hook_type' unknown"
+        fail
+    fi
+
+    sudo ls /usr/share/yunohost/hooks/backup/ /etc/yunohost/hooks.d/backup/ | grep "\-${hook_type}_" | cut -d"-" -f2 | uniq 2>>/dev/null
+}
+
+### FUNCTION BEGIN
+# Check if the app is updating or if there is another backup process running
+# PRINT:
+#   echo message on stderr
+# RETURNS:
+#   0 of the app is not updating and no other backup process is running
+#   1 if the app is updating or another backup process is running
+### FUNCTION END
+is_updating_or_running() {
+
+    local state
+    state=$(get_conf state)
+
+    if [[ $state == "ongoing" || $state == "updating" ]]; then
+        return 1
+    fi
+
+    # state should have this format :
+    # state="updated at 2025-07-31 14:30:00"
+    if [[ "$state" =~ ^updated\ at\ [0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2}$ ]]; then
+        # Extract timestamp from state
+        timestamp=$(echo "$state" | awk '{print $3, $4}')
+        # Convert timestamp to epoch
+        timestamp_epoch=$(date -d "$timestamp" +%s)
+        # Get current date in epoch
+        now_epoch=$(date +%s)
+        # Calculate difference
+        diff=$((now_epoch - timestamp_epoch))
+
+        if [[ $diff -lt 300 ]]; then
+            log_error "The app was updated less than 5 minutes ago, this is an unvoluntary backup."
+            return 1
+        fi
+    fi
+
+    return 0
+}
+
+disable_nobackup_multimedia() {
+    # Disable .nobackup file if exists
+    if [[ -e /home/yunohost.multimedia/.nobackup ]]; then
+        sudo mv /home/yunohost.multimedia/.nobackup /home/yunohost.multimedia/.nobackup_disabled
+    fi
+}
+
+
+restore_nobackup_multimedia() {
+    # restore .nobackup file
+    if [[ -e /home/yunohost.multimedia/.nobackup_disabled ]]; then
+        sudo mv /home/yunohost.multimedia/.nobackup_disabled /home/yunohost.multimedia/.nobackup
+    fi
+}
+
+execute_script() {
+    local script="$1"
+
+    # We need to script command in a subshell to get return code and output text (althought we have tee return which is always true)
+    local script_output=""
+    local script_return=0
+
+    script_output=$($script 2>&1)
+    script_return=$?
+    # echo whithout colors to log file (for the mail)
+    echo -e "$script_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' >> "$MAIL_LOG_FILE"
+    echo -e "$script_output"
+
+    return $script_return
+}

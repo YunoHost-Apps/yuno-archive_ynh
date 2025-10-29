@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+
+# Script used to send archives directly to a remote repo according to configuration
+# Using yuno_archive script. This script is not called from yunohost backup system
+
+source "__INSTALL_DIR__/script_helpers"
+
+# Fail on error
+set -Eeuo pipefail
+
+# yuno-archive script
+readonly YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
+
+# yunohost archives dir
+readonly YNH_ARCHIVE_DIR="/home/yunohost.backup/archives"
+
+# Script name and path
+THIS_SCRIPT=$(readlink -f "${BASH_SOURCE[0]}")
+readonly THIS_SCRIPT
+
+#=========================================================#
+#                           MAIN                          #
+#=========================================================#
+
+echo "---------- START SENDING FROM ${THIS_SCRIPT} -----------"
+
+set_conf last_run "$(date "+%Y-%m-%d %H:%M:%S")"
+set_conf state ongoing
+
+is_verbose=false
+verbose_option=""
+
+if [[ $( get_conf debug ) == "1" ]]; then
+    verbose_option="--verbose"
+    is_verbose=true
+fi
+
+fail=false
+
+case $(get_conf_method) in
+send_to_drive)
+    if $is_verbose; then
+        echo "$YUNO_ARCHIVE send drive --log='${YUNO-ARCHIVE_LOG_FILE}' --drive='$( get_conf_repository )' --repository='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
+    fi
+
+    sudo $YUNO_ARCHIVE send drive \
+        --log="${YUNO-ARCHIVE_LOG_FILE}" \
+        --drive="$( get_conf_repository )" \
+        --repository="ynh_archives" \
+        --source="${YNH_ARCHIVE_DIR}" \
+        "${verbose_option}" || fail=true
+    ;;
+send_to_rclone)
+    if $is_verbose; then
+        echo "$YUNO_ARCHIVE send rclone --log='${YUNO-ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --path='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
+    fi
+
+    sudo $YUNO_ARCHIVE send rclone \
+        --log="${YUNO-ARCHIVE_LOG_FILE}" \
+        --repository="$( get_conf_repository )" \
+        --path="ynh_archives" \
+        --source="${YNH_ARCHIVE_DIR}" \
+        "${verbose_option}" || fail=true
+    ;;
+*)
+    echo "Unknown method '$METHOD'" >&2
+    fail=true
+    ;;
+esac
+
+echo "---------- END SENDING FROM ${THIS_SCRIPT} -----------"
+
+if $fail; then
+    fail
+else
+    set_conf state successful
+fi
+exit 0

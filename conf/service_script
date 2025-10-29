@@ -2,3 +2,91 @@
 
 # This script is called by the systemd service to launch backup or send according to configuration
 
+source "__INSTALL_DIR__/script_helpers"
+
+#=========================================================#
+#                     GLOBAL VARS                         #
+#=========================================================#
+
+# Script name and path
+THIS_SCRIPT=$(readlink -f "${BASH_SOURCE[0]}")
+readonly THIS_SCRIPT
+
+# Backup script
+readonly BACKUP_SCRIPT="__INSTALL_DIR__/backup"
+
+# Send script
+readonly SEND_SCRIPT="__INSTALL_DIR__/send"
+
+#=========================================================#
+#                    SCRIPT FUNCTIONS                     #
+#=========================================================#
+
+### FUNCTION BEGIN
+# Usage function to show help message
+# OUTPUTS:
+# 	Print help message to stdout
+### FUNCTION END
+usage() {
+    cat <<MSG_USAGE
+Script used to launch Yuno-archive according to configuration
+
+Usage  :
+   $(basename "$0") [Options]
+
+
+Options :
+   -h : Show this message
+   -f : Force script execution (do not check if there is another instance running)
+MSG_USAGE
+}
+
+
+#=========================================================#
+#                           MAIN                          #
+#=========================================================#
+while getopts "fh" option; do
+    case "${option}" in
+    h)
+        usage
+        exit 0
+        ;;
+    f)
+        FORCE=true
+        ;;
+    *)
+        usage
+        exit 1
+        ;;
+    esac
+done
+
+# This is a hack to avoid executing script during ar backup or just after it.
+# For an obscure reason, the script is executed by systemd just after an update
+# We use FORCE to by pass this check
+if [[ ! $FORCE ]]; then
+    if is_updating_or_running; then
+        log_error "[ERROR] There is another backup process running or app in updating state. Abord.\nIf the problem persist after reboot, call '$THIS_SCRIPT' with -f option"
+        send_mail
+        exit 1
+    fi
+fi
+
+
+now="$(date "+%Y-%m-%d %H:%M:%S")"
+echo "${now} STARTING BACKUP __APP__" | tee -a "$LOG_FILE"
+
+
+case "$METHOD" in
+send_to_drive | send_to_rclone)
+    execute_script "$SEND_SCRIPT" || true
+    ;;
+*)
+    execute_script "$BACKUP_SCRIPT" || true
+    ;;
+esac
+
+now="$(date "+%Y-%m-%d %H:%M:%S")"
+echo "${now} END BACKUP __APP__" | tee -a "$LOG_FILE"
+
+send_mail
