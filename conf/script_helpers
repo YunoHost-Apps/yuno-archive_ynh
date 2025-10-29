@@ -17,34 +17,6 @@ readonly YUNO-ARCHIVE_LOG_FILE='/var/log/__APP__/backup.log'
 #                    SCRIPT FUNCTIONS                     #
 #=========================================================#
 
-log() {
-    local message="$1"
-    echo "$message" | tee -a "$MAIL_LOG_FILE"
-}
-
-log_error() {
-    local message="$1"
-    echo "$message" | tee -a "$MAIL_LOG_FILE"
-    set_error
-}
-
-set_error() {
-    # Global flag to set if is error or not
-    declare -g _IS_ERROR
-
-    if [[ -z $_IS_ERROR ]]; then
-        _IS_ERROR=true
-    fi
-}
-
-is_error() {
-    if [[ -z $_IS_ERROR  || ! $_IS_ERROR ]]; then
-        return 1
-    fi
-
-    return 1
-}
-
 fail() {
     set_conf state failed
     exit 1
