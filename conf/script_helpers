@@ -206,3 +206,15 @@ execute_script() {
 
     return $script_return
 }
+
+### FUNCTION BEGIN
+# Convert size in bytes in human readable size KiB, MiB, GiB...
+# ARGUMENTS:
+# 	$1 (integer) value in bytes
+# OUTPUTS:
+# 	Prints value to stdout
+### FUNCTION END
+hrb() {
+    local bytes="$1"
+    numfmt --to=iec-i --suffix=O --format="%9.2f" "$bytes" | sed s/'^ *\([0-9,\.]*\)\(.*\)'/'\1 \2'/
+}

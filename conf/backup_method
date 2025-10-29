@@ -39,6 +39,64 @@ readonly HOOK_FILE="__INSTALL_DIR__/backup_hook"
 #                    SCRIPT FUNCTIONS                     #
 #=========================================================#
 
+### FUNCTION BEGIN
+# Get backup name, this name is deducted from config
+# If we use an incremental backup we get the last incremental backup number and 
+# determine if this number is over the max incremental number
+# If over incremental number or not incremental, we use BACKUP_NAME
+# OUTPUTS:
+# 	Prints backup name to stdout
+### FUNCTION END
+create_backup_name() {
+    if [[ $( get_conf is_incremental ) != "1" ]]; then
+        echo "${BACKUP_NAME}"
+        return 0
+    fi
+
+    local max_incremental_number
+    max_incremental_number=$( get_conf max_incremental_number )
+    local last_incremental_number
+    last_incremental_number=$( get_conf last_incremental_number )
+    local origin_incremental_name
+    origin_incremental_name=$( get_conf origin_incremental_name )
+
+    if [[ -z $origin_incremental_name || -z $last_incremental_number || -z $max_incremental_number ]]; then
+        echo "${BACKUP_NAME}"
+        return 0
+    fi
+
+    if [[ $last_incremental_number -ge $max_incremental_number ]]; then
+        echo "${BACKUP_NAME}"
+        return 0
+    fi
+
+    echo "$origin_incremental_name"
+}
+
+update_incremental_name() {
+    local name="$1"
+
+    if [[ $( get_conf is_incremental ) != "1" ]]; then
+        return 0
+    fi
+
+    local last_incremental_number
+    last_incremental_number=$( get_conf last_incremental_number )
+    local new_incremental_number
+    local max_incremental_number
+    max_incremental_number=$( get_conf max_incremental_number )
+
+    if [[ -z $last_incremental_number || $last_incremental_number -ge $max_incremental_number ]]; then
+        new_incremental_number=0
+    else
+        new_incremental_number=$(( last_incremental_number + 1 ))
+    fi
+
+    set_conf origin_incremental_name "$name"
+    set_conf last_incremental_number "$new_incremental_number"
+}
+
+
 do_need_mount() {
     true
 }
@@ -68,24 +126,33 @@ do_backup() {
         verbose_option="--verbose"
     fi
 
+    local incremental_option=""
+    if [[ $( get_conf is_incremental ) == "1" ]]; then
+        incremental_option="--incremental"
+    fi
+
     local keep
     keep=$( get_conf keep )
 
     local repository
     repository=$( get_conf_repository )
 
+    local name
+    name=$( create_backup_name )
+
     case "$method" in
     local)
         $YUNO_ARCHIVE backup local \
             --log="${YUNO-ARCHIVE_LOG_FILE}" \
             --repository="${repository}" \
-            --name="$BACKUP_NAME" \
+            --name="${name}" \
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
             --info="${INFO_FILE}" \
             --keep="${keep}" \
             --hook="${HOOK_FILE}" \
-            "${verbose_option}" ||
+            "${verbose_option}" \
+            "${incremental_option}" ||
             fail
         ;;
     # We won't fail with send_to_drive method because this method could be called directly in command line
@@ -94,13 +161,14 @@ do_backup() {
             --log="${YUNO-ARCHIVE_LOG_FILE}" \
             --drive="${repository}" \
             --repository="ynh_archives" \
-            --name="$BACKUP_NAME" \
+            --name="${name}" \
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
             --info="${INFO_FILE}" \
             --keep="${keep}" \
             --hook="${HOOK_FILE}" \
-            "${verbose_option}" ||
+            "${verbose_option}" \
+            "${incremental_option}" ||
             fail
         ;;
     # We won't fail with send_to_drive method because this method could be called directly in command line
@@ -109,13 +177,14 @@ do_backup() {
             --log="${YUNO-ARCHIVE_LOG_FILE}" \
             --repository="${repository}" \
             --path="ynh_archives" \
-            --name="$BACKUP_NAME" \
+            --name="${name}" \
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
             --info="${INFO_FILE}" \
             --keep="${keep}" \
             --hook="${HOOK_FILE}" \
-            "${verbose_option}" ||
+            "${verbose_option}" \
+            "${incremental_option}" ||
             fail
         ;;
     *)
@@ -124,11 +193,25 @@ do_backup() {
         ;;
     esac
 
-    # To make backup visible on yunohost Backup local menu, we modify name file and add a symbolic link with only tar name
+    update_incremental_name "$name"
+
+     # To make backup visible on yunohost Backup local menu, we add a symbolic link with only tar name
     if [[ $( get_conf ynh_repo ) == "1" ]]; then
         readonly ynh_archive_dir="/home/yunohost.backup/archives"
 
-        ln -sfn "${ynh_archive_dir}/${BACKUP_NAME}.tar.gz" "${ynh_archive_dir}/${BACKUP_NAME}.tar"
+        local increment_suffix_name=""
+
+        if [[ $( get_conf is_incremental ) == '1' ]]; then
+            # last_incremental_number as been updated by update_incremental_name
+            if [[ $( get_conf last_incremental_number ) == "0" ]]; then
+                increment_suffix_name='.base'
+            else
+                increment_suffix_name=".inc${new_incremental_number}"
+            fi
+        fi
+
+        local backup_name="${name}${increment_suffix_name}"
+        ln -sfn "${ynh_archive_dir}/${backup_name}.tar.gz" "${ynh_archive_dir}/${backup_name}.tar"
     fi
 
     set_conf state successful
@@ -157,3 +240,4 @@ backup)
 esac
 
 exit 0
+

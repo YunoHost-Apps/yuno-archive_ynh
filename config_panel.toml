@@ -80,6 +80,23 @@ services = []
         type = "alert"
         style = "info"
 
+        [main.general.is_incremental]
+        ask.en = "Incremental backup"
+        ask.fr = "Sauvegarde Incrémentale"
+        visible = "method != 'send_to_drive' && method == 'send_to_rclone' )"
+        type = "boolean"
+        help.en = "`Yes` Incremental backups will be performed which can save more space but need to get full and increments backups to be restored manually."
+        help.fr = "`Oui` Des sauvegardes incrémentales seront réalisées ce qui permet de sauvegarder beaucoup de place mais nécessitera de réaliser une restauration manuelle à partir du backup complet avec ses incréments."
+
+        [main.general.max_incremental_number]
+        ask.en = "Max increments"
+        ask.fr = "Incréments maximums"
+        visible = "is_incremental"
+        type = "number"
+        help.en = "Maximum number of increments before doing a new complete backup."
+        help.fr = "Nombre maximum d'increments avant de réaliser une nouvelle sauvegarde complète."
+
+
         [main.general.on_calendar]
         ask.en = "When and at which frequency should the backups be performed?"
         ask.fr = "Quand et à quelle fréquence les sauvegardes doivent-elles être effectuées ?"

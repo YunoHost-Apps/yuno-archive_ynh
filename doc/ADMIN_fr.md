@@ -5,7 +5,7 @@ Dans le choix d'une sauvegarde locale, vous pouvez spécifier le répertoire des
 Vous pouvez aussi spécifier un répertoire local.
 **Attention** :  ce répertoire sera utilisé tel quel à pertir du moment où il existe. Assurez-vous que ce répertoire ne contienne que des archives !
 
-### Archives sur disque externe
+## Archives sur disque externe
 
 Ce mode vous permet de brancher un disque externe et reconnu par le système (ex : /dev/sde1).
 Vous devez spécifier la partition du disque dur (ex : /dev/sde1) et non le disque en entier (ex: /dev/sde)
@@ -73,10 +73,26 @@ Pour mettre à jour Rclone :
 sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ```
 
-### Suppression automatique des anciennes sauvegardes
+## Suppression automatique des anciennes sauvegardes
 
 Lors du processus de backup, s'il n'y a pas assez de place sur la destination, le script peut supprimer automatiquement les anciennes sauvegardes.
 Si vous choisissez de conserver toutes les sauvegardes, cette actions sera inhibée.
 
 Sinon, vous pouvez déterminer le nombre de sauvegardes à conserver au minimum.
 Dans ce cas, le processus supprimera les anciennes sauvegardes (en commençant par la plus ancienne) jusqu'à ce qu'il y ai suffisamment de place sur la destination tout en s'assurant de garder le nombre minimal de sauvegardes choisies.
+
+## Sauvegardes incrémentales
+
+L'utilisation des sauvegardes incrémentales fonctionne comme suit:
+- La 1ère sauvegarde est complète et contient tous les fichiers à sauvegarder
+- La suivantes ne sauvegarde que les fichiers modifés depuis la sauvegarde complète
+- Les suivantes ne sauvegardent que les fichiers modifiés depuis l'incrément précédent
+
+Il faut définir un nombre d'incréments maximum avant que le script ne refasse une sauvegarde complète.
+Les sauvegardes complètes seront nommés ...base.tar.gz et les incréments ...inc0-9.tar.gz
+
+Par exemple, si vous définissez une sauvegarde incrémentale qui se lance 1 fois par jour avec un max d'incréments de 6.
+Vous obtiendrez :
+- 1 sauvegarde complète (ex : le lundi)
+- 6 incréments basés sur cette sauvegarde complète (mardi à dimanche)
+- la semaine suivante une nouvelle sauvegarde complète
