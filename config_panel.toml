@@ -38,10 +38,12 @@ services = []
         choices.local = "Local filesystem"
         choices.drive = "External drive"
         choices.rclone = "Rclone"
+        choices.scp = "SCP"
         choices.send_to_drive = "Send to external drive"
         choices.send_to_rclone = "Send to Rclone"
-        help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository.<br>**Send to external drive** Only send archives from YunoHost's local backups directory to an external drive. (no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured Rclone repository.(no new backup created)"
-        help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré.<br>**Send to external drive** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un disque externe. (aucune nouvelle sauvegarde créée)<br>**Send to Rclone** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt Rclone configuré. (aucune nouvelle sauvegarde créée)"
+        choices.send_to_scp = "Send to SCP"
+        help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository.<br>**SCP** The repository corresponds to a SSH server (using SCP command).<br>**Send to external drive** Only send archives from YunoHost's local backups directory to an external drive. (no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured Rclone repository.(no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured SCP repository.(no new backup created)"
+        help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré.<br>**SCP** The dépôt correspond à un serveur SSH (en utilisant la commande SCP).<br>**Send to external drive** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un disque externe. (aucune nouvelle sauvegarde créée)<br>**Send to Rclone** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt Rclone configuré. (aucune nouvelle sauvegarde créée)<br>**Send to SCP** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt SCP configuré. (aucune nouvelle sauvegarde créée)"
 
         [main.general.local_repository]
         ask.en = "Local directory"
@@ -79,6 +81,16 @@ services = []
         visible = "!ynh_repo && ( method == 'rclone' || method == 'send_to_rclone' )"
         type = "alert"
         style = "info"
+
+        [main.general.scp_repository]
+        ask.en = "SSH server and directory"
+        ask.fr = "Serveur SSH et répertoire"
+        visible = "!ynh_repo && ( method == 'scp' || method == 'send_to_scp' )"
+        type = "string"
+        pattern.regexp = '^([a-zA-Z0-9._-]+@)?[a-zA-Z0-9._-]+:/.+$'
+        pattern.error = "Is not an ssh and path valid pattern"
+        help.en = "Enter destination like **host:/absolute/desintation/path** or **user@host:/absolute/desintation/path**\nConnection to host as to be passwordless (see help)"
+        help.fr = "Saisir la destination sous la forme **host:/repertoire/absolu** ou **user@host:/repertoire/absolu\nLa connexion au host doit se faire sans mot de passe (voir l'aide)"
 
         [main.general.is_incremental]
         ask.en = "Incremental backup"
