@@ -130,7 +130,7 @@ send_mail() {
 filter_hooks() {
     local hook_type="$1"
 
-    if [[ $hook_type != 'conf' || $hook_type != 'data' ]]; then
+    if [[ $hook_type != 'conf' && $hook_type != 'data' ]]; then
         log_error "filter_hooks: hook-type '$hook_type' unknown"
         fail
     fi
