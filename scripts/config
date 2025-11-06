@@ -103,6 +103,22 @@ fetch_rclone_backups() {
     return 0
 }
 
+fetch_scp_backups() {
+    local repo="$1"
+
+    local list
+    list=$($YUNO_ARCHIVE list scp --repository="$repo" --sort=newerfirst --full --human_readable 2>&1)
+
+    # yuno-archive echo ❌ emoji for errors
+    if echo "$list" | grep -q "❌"; then
+        echo_error_fetching_last_backups "$repo"
+        return 0
+    fi
+
+    echo_last_backups "$list"
+    return 0
+}
+
 get__last_backups() {
 
     local local_repository="/home/yunohost.backup/archives"
@@ -111,6 +127,7 @@ get__last_backups() {
     fi
     local drive_repository="${old[drive_repository]}"
     local rclone_repository="${old[rclone_repository]}"
+    local scp_repository="${old[scp_repository]}"
     local method="${old[method]}"
 
     case "$method" in
@@ -122,6 +139,9 @@ get__last_backups() {
         ;;
     rclone | send_to_rclone)
         fetch_rclone_backups "$rclone_repository"
+        ;;
+    scp | send_to_scp)
+        fetch_scp_backups "$scp_repository"
         ;;
     *)
         echo_error_fetching_last_backups ""
