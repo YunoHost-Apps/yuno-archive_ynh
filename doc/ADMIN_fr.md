@@ -73,6 +73,21 @@ Pour mettre à jour Rclone :
 sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ```
 
+## Sauvegarde SCP
+
+La sauvegarde SCP nécessite un serveur SSH et utilise la commande scp qui est une copie en utilisant le protocole SSH.
+Cela nécessite d'avoir déjà configuré une connexion au serveur SSH sans mot de passe, notamment avec l'authentification par clé.
+
+Voici comment procéder simplement en exécutant ces commandes sur le serveur YunoHost :
+```bash
+# Création d'une paire de clés pour l'utilisateur root
+sudo ssh-keygen
+
+# Envoi de la clé publique sur le serveur distant
+sudo ssh-copy-id user@host
+```
+
+
 ## Suppression automatique des anciennes sauvegardes
 
 Lors du processus de backup, s'il n'y a pas assez de place sur la destination, le script peut supprimer automatiquement les anciennes sauvegardes.
@@ -89,7 +104,7 @@ L'utilisation des sauvegardes incrémentales fonctionne comme suit:
 - Les suivantes ne sauvegardent que les fichiers modifiés depuis l'incrément précédent
 
 Il faut définir un nombre d'incréments maximum avant que le script ne refasse une sauvegarde complète.
-Les sauvegardes complètes seront nommés ...base.tar.gz et les incréments ...inc0-9.tar.gz
+Les sauvegardes complètes seront nommés ...base.tar.gz et les incréments ...inc01,02,....tar.gz
 
 Par exemple, si vous définissez une sauvegarde incrémentale qui se lance 1 fois par jour avec un max d'incréments de 6.
 Vous obtiendrez :

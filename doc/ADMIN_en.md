@@ -75,6 +75,20 @@ To upgrade rclone:
 sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ```
 
+## Archive on SCP
+
+SCP backup need a SSH server and use `scp` command which copy data througth SSH protocol.
+You need to configure a SSH connexion without password (using key authentication)
+
+You can simply create this with thoses commands :
+```bash
+# Create key pair for root user
+sudo ssh-keygen
+
+# send root public key to the host
+sudo ssh-copy-id user@host
+```
+
 ## Automatic deletion of old backups
 
 During the backup process, if there is not enough space on the destination, the script can automatically delete old backups.
