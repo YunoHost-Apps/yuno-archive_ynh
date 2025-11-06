@@ -24,6 +24,7 @@ ynh_app_setting_set --key="state" --value="updating"
 ynh_app_setting_set --key="last_run" --value="-"
 ynh_app_setting_set_default --key=debug --value=0
 ynh_app_setting_set_default --key=is_incremental --value=0
+ynh_app_setting_set_default --key=max_incremental_number --value=0
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
@@ -72,9 +73,9 @@ ynh_config_add --template="service_script" --destination="$install_dir/systemd_s
 chown "$app:$app" "$install_dir/systemd_start"
 chmod ug+rx "$install_dir/systemd_start"
 
-ynh_config_add --template="script_helper" --destination="$install_dir/script_helper"
-chown "$app:$app" "$install_dir/script_helper"
-chmod +r "$install_dir/script_helper"
+ynh_config_add --template="script_helpers" --destination="$install_dir/script_helpers"
+chown "$app:$app" "$install_dir/script_helpers"
+chmod +r "$install_dir/script_helpers"
 
 #=================================================
 # REAPPLY SYSTEM CONFIGURATIONS

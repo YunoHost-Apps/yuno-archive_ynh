@@ -88,14 +88,15 @@ services = []
         visible = "!ynh_repo && ( method == 'scp' || method == 'send_to_scp' )"
         type = "string"
         pattern.regexp = '^([a-zA-Z0-9._-]+@)?[a-zA-Z0-9._-]+:/.+$'
-        pattern.error = "Is not an ssh and path valid pattern"
-        help.en = "Enter destination like **host:/absolute/desintation/path** or **user@host:/absolute/desintation/path**\nConnection to host as to be passwordless (see help)"
-        help.fr = "Saisir la destination sous la forme **host:/repertoire/absolu** ou **user@host:/repertoire/absolu\nLa connexion au host doit se faire sans mot de passe (voir l'aide)"
+        pattern.error.en = "String as to be in format host:/absolute/destination/path or user@host:/absolute/destination/path"
+        pattern.error.fr = "La chaine doit être au format host:/repertoire/absolu ou user@host:/repertoire/absolu"
+        help.en = "Enter destination like **host:/absolute/destination/path** or **user@host:/absolute/destination/path**\nConnection to host as to be passwordless (see help)"
+        help.fr = "Saisir la destination sous la forme **host:/repertoire/absolu** ou **user@host:/repertoire/absolu**\nLa connexion au host doit se faire sans mot de passe (voir l'aide)"
 
         [main.general.is_incremental]
         ask.en = "Incremental backup"
         ask.fr = "Sauvegarde Incrémentale"
-        visible = "method != 'send_to_drive' && method == 'send_to_rclone' )"
+        visible = "method != 'send_to_drive' && method != 'send_to_rclone' && method != 'send_to_scp'"
         type = "boolean"
         help.en = "`Yes` Incremental backups will be performed which can save more space but need to get full and increments backups to be restored manually."
         help.fr = "`Oui` Des sauvegardes incrémentales seront réalisées ce qui permet de sauvegarder beaucoup de place mais nécessitera de réaliser une restauration manuelle à partir du backup complet avec ses incréments."
