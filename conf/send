@@ -68,7 +68,7 @@ send_to_scp)
         log "$YUNO_ARCHIVE send scp --log='${YUNO_ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
     fi
 
-    execute_cmd sudo $YUNO_ARCHIVE send rclone \
+    execute_cmd sudo $YUNO_ARCHIVE send scp \
         --log="${YUNO_ARCHIVE_LOG_FILE}" \
         --repository="$( get_conf_repository )" \
         --source="${YNH_ARCHIVE_DIR}" \

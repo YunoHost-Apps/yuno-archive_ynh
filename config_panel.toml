@@ -135,6 +135,9 @@ services = []
         help.en = "Enter `all` to keep all archives for each backup.<br>Enter an integer between `0 and n` to delete old archives if space is needed (`0` can delete everything, `n` will keep at least `n`)"
         help.fr = "Saisir `all` pour conserver toutes les archives à chaque sauvegarde.<br>Saisir un entier entre `0 et n` pour supprimer les anciennes archives si on a besoin de place (`0` peut tout supprimer, `n` en conservera minimum `n`)"
         type = "string"
+        pattern.regexp = '^(all)|([0-9]+)$'
+        pattern.error.en = "Value has to be a number or `all`"
+        pattern.error.fr = "La valeur doit être un nombre ou `all`"
 
         [main.general.debug]
         ask.en = "Debug mode"

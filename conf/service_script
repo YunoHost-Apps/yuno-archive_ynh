@@ -76,7 +76,7 @@ now="$(date "+%Y-%m-%d %H:%M:%S")"
 log "${now} STARTING BACKUP __APP__"
 
 
-case "$METHOD" in
+case "$( get_conf_method )" in
 send_to_drive | send_to_rclone | send_to_scp)
     "$SEND_SCRIPT" || true
     ;;
