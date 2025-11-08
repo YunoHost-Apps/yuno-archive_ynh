@@ -1,10 +1,10 @@
 [Unit]
-Description=Run backup __APP__
+Description=Run __APP__
 After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=__INSTALL_DIR__/backup >/dev/null 2>&1
+ExecStart=__INSTALL_DIR__/systemd_start >/dev/null 2>&1
 User=__APP__
 Group=__APP__
 

@@ -7,7 +7,7 @@ name = "Yuno Archive"
 description.en = "Extend functionnality of built-in yunoHost backup system"
 description.fr = "Étend les fonctionnalités du backup fourni par YunoHost en permettant la sauvegarde auto à intervales régulières et l'envoi sur distant via Rclone"
 
-version = "0.3.1~ynh3"
+version = "0.4.0~ynh1"
 
 maintainers = ["Mistermasque"]
 
@@ -59,8 +59,8 @@ ram.runtime = "50M"
 
 [resources]
     [resources.sources.main]
-    url = "https://github.com/Mistermasque/yuno-archive/archive/refs/tags/0.3.1.tar.gz"
-    sha256 = "c9a692308c2c556ccd8f7a2dc727f4e4ca5d9b2754e333eccc383d524dc1732b"
+    url = "https://github.com/Mistermasque/yuno-archive/archive/refs/tags/0.4.0.tar.gz"
+    sha256 = "f80b41546fca1764b09116b6c276e8b23f7b9accc7b3b34a97e35248989961c7"
     autoupdate.strategy = "latest_github_tag"
 
     [resources.system_user]
