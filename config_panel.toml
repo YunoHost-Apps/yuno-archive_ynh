@@ -147,7 +147,7 @@ services = []
     [main.content]
     name.en = "What should be backed up?"
     name.fr = "Qu'est ce qui devrait être sauvegardé ?"
-    visible = "method != 'send_to_rclone' && method != 'send_to_drive'" && method != 'send_to_scp'"
+    visible = "method != 'send_to_rclone' && method != 'send_to_drive' && method != 'send_to_scp'"
     optional = false
 
         [main.content.save_system_conf]
