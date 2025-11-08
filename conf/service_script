@@ -77,7 +77,7 @@ log "${now} STARTING BACKUP __APP__"
 
 
 case "$METHOD" in
-send_to_drive | send_to_rclone)
+send_to_drive | send_to_rclone | send_to_scp)
     "$SEND_SCRIPT" || true
     ;;
 *)
