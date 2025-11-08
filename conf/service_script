@@ -41,35 +41,6 @@ Options :
 MSG_USAGE
 }
 
-log() {
-    local message="$1"
-    echo "$message" | tee -a "$MAIL_LOG_FILE"
-}
-
-log_error() {
-    local message="$1"
-    echo "$message" | tee -a "$MAIL_LOG_FILE"
-    set_error
-}
-
-set_error() {
-    # Global flag to set if is error or not
-    declare -g _IS_ERROR
-
-    if [[ -z $_IS_ERROR ]]; then
-        _IS_ERROR=true
-    fi
-}
-
-is_error() {
-    if [[ -z $_IS_ERROR  || ! $_IS_ERROR ]]; then
-        return 1
-    fi
-
-    return 1
-}
-
-
 #=========================================================#
 #                           MAIN                          #
 #=========================================================#
@@ -102,19 +73,19 @@ fi
 
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
-echo "${now} STARTING BACKUP __APP__" | tee -a "$LOG_FILE"
+log "${now} STARTING BACKUP __APP__"
 
 
 case "$METHOD" in
 send_to_drive | send_to_rclone)
-    execute_script "$SEND_SCRIPT" || true
+    "$SEND_SCRIPT" || true
     ;;
 *)
-    execute_script "$BACKUP_SCRIPT" || true
+    "$BACKUP_SCRIPT" || true
     ;;
 esac
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
-echo "${now} END BACKUP __APP__" | tee -a "$LOG_FILE"
+log "${now} END BACKUP __APP__"
 
 send_mail

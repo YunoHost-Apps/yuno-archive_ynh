@@ -8,10 +8,14 @@
 #=========================================================#
 
 # log file for mail notification
-MAIL_LOG_FILE=$(mktemp)
+MAIL_LOG_FILE="${MAIL_LOG_FILE:-$(mktemp)}"
 readonly MAIL_LOG_FILE
 # Log file used by yuno-archive script
-readonly YUNO-ARCHIVE_LOG_FILE='/var/log/__APP__/backup.log'
+readonly YUNO_ARCHIVE_LOG_FILE='/var/log/__APP__/backup.log'
+
+_CONF_METHOD=""
+_CONF_REPOSITORY=""
+_IS_ERROR=false
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #
@@ -48,36 +52,37 @@ set_conf() {
 
 get_conf_method() {
     # Store value in variable to avoid calling conf multiple times
-    declare -g _CONF_METHOD
+    #declare -g _CONF_METHOD
 
-    if [[ -z $_CONF_METHOD ]]; then
+    if [[ -z ${_CONF_METHOD:-} ]]; then
         _CONF_METHOD=$(get_conf method)
     fi
 
     case "$_CONF_METHOD" in
-    local | drive | send_to_drive | rclone | send_to_rclone)
+    local | drive | send_to_drive | rclone | send_to_rclone | scp | send_to_scp)
         echo "$_CONF_METHOD"
         ;;
     *)
         log_error "get_conf_method: Method '$_CONF_METHOD' from configuration unknown"
         fail
     esac
-
-    echo "$_CONF_METHOD"
 }
 
 
 # Get repository stored in conf
 get_conf_repository() {
     # Store value in variable to avoid calling conf multiple times
-    declare -g _CONF_REPOSITORY
+    #declare -g _CONF_REPOSITORY
 
-    if [[ -n $_CONF_REPOSITORY ]]; then
+    if [[ -n ${_CONF_REPOSITORY:-} ]]; then
         echo "$_CONF_REPOSITORY"
         return
     fi
 
-    case $( get_conf_method ) in
+    local method
+    method="$( get_conf_method )"
+
+    case "$method" in
     local)
         local is_default_repo=""
         is_default_repo=$(get_conf ynh_repo)
@@ -94,6 +99,12 @@ get_conf_repository() {
     rclone | send_to_rclone)
         _CONF_REPOSITORY=$(get_conf rclone_repository)
         ;;
+    scp | send_to_scp)
+        _CONF_REPOSITORY=$(get_conf scp_repository)
+        ;;
+    *)
+        log_error "get_conf_repository: unsupported method '$method'"
+        ;; 
     esac
 
     echo "$_CONF_REPOSITORY"
@@ -103,7 +114,7 @@ get_conf_repository() {
 send_mail() {
     local mailalert="never"
     mailalert=$(get_conf mailalert)
-    local msg_log="For more details, consult '${YUNO-ARCHIVE_LOG_FILE}'"
+    local msg_log="For more details, consult '${YUNO_ARCHIVE_LOG_FILE}'"
 
     local repository="unknown"
     repository=$(get_conf_repository)
@@ -112,21 +123,20 @@ send_mail() {
     method=$(get_conf_method)
 
     if [[ $IS_ERROR && $mailalert != "never" ]]; then
-        cat <(echo -e "${msg_log}\n") "$LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ failed onto $repository" admins
+        cat <(echo -e "${msg_log}\n") "$MAIL_LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ failed onto $repository" admins
     elif [[ $mailalert == "always" ]]; then
-        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ succeeded onto $repository" admins <"$LOG_FILE"
+        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ succeeded onto $repository" admins <"$MAIL_LOG_FILE"
     fi
 
-    rm -rf "$LOG_FILE"
+    rm -rf "$MAIL_LOG_FILE"
 }
 
-### FUNCTION BEGIN
+
 # Get hook scripts for backuping up conf or data app
 # ARGUMENTS:
 #   $1 (string) hook type. Can be : app|conf
 # OUTPUTS:
 # 	Print help message to stdout
-### FUNCTION END
 filter_hooks() {
     local hook_type="$1"
 
@@ -135,24 +145,23 @@ filter_hooks() {
         fail
     fi
 
-    sudo ls /usr/share/yunohost/hooks/backup/ /etc/yunohost/hooks.d/backup/ | grep "\-${hook_type}_" | cut -d"-" -f2 | uniq 2>>/dev/null
+    sudo ls /usr/share/yunohost/hooks/backup/ /etc/yunohost/hooks.d/backup/ 2>>/dev/null | grep "\-${hook_type}_" | cut -d"-" -f2 | uniq || true
 }
 
-### FUNCTION BEGIN
+
 # Check if the app is updating or if there is another backup process running
 # PRINT:
 #   echo message on stderr
 # RETURNS:
-#   0 of the app is not updating and no other backup process is running
-#   1 if the app is updating or another backup process is running
-### FUNCTION END
+#   1 if the app is not updating and no other backup process is running
+#   0 if the app is updating or another backup process is running
 is_updating_or_running() {
 
     local state
     state=$(get_conf state)
 
     if [[ $state == "ongoing" || $state == "updating" ]]; then
-        return 1
+        return 0
     fi
 
     # state should have this format :
@@ -169,11 +178,11 @@ is_updating_or_running() {
 
         if [[ $diff -lt 300 ]]; then
             log_error "The app was updated less than 5 minutes ago, this is an unvoluntary backup."
-            return 1
+            return 0
         fi
     fi
 
-    return 0
+    return 1
 }
 
 disable_nobackup_multimedia() {
@@ -191,30 +200,54 @@ restore_nobackup_multimedia() {
     fi
 }
 
-execute_script() {
-    local script="$1"
-
-    # We need to script command in a subshell to get return code and output text (althought we have tee return which is always true)
-    local script_output=""
-    local script_return=0
-
-    script_output=$($script 2>&1)
-    script_return=$?
-    # echo whithout colors to log file (for the mail)
-    echo -e "$script_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' >> "$MAIL_LOG_FILE"
-    echo -e "$script_output"
-
-    return $script_return
-}
-
-### FUNCTION BEGIN
 # Convert size in bytes in human readable size KiB, MiB, GiB...
 # ARGUMENTS:
 # 	$1 (integer) value in bytes
 # OUTPUTS:
 # 	Prints value to stdout
-### FUNCTION END
 hrb() {
     local bytes="$1"
     numfmt --to=iec-i --suffix=O --format="%9.2f" "$bytes" | sed s/'^ *\([0-9,\.]*\)\(.*\)'/'\1 \2'/
+}
+
+log() {
+    local message="$1"
+    echo -e "$message" | tee -a "${MAIL_LOG_FILE}"
+}
+
+log_error() {
+    local message="$1"
+    echo -e "$message" | tee -a "${MAIL_LOG_FILE}"
+    set_error
+}
+
+set_error() {
+    # Global flag to set if is error or not
+    #declare -g _IS_ERROR
+
+    if [[ -z ${_IS_ERROR:-} ]]; then
+        _IS_ERROR=true
+    fi
+}
+
+is_error() {
+    if [[ -z ${_IS_ERROR:-} || ! ${_IS_ERROR:-false} ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+execute_cmd() {
+    local script_output=""
+    local script_return=0
+
+    # We need to script command in a subshell to get return code and output text (althought we have tee return which is always true)
+    script_output=$("$@" 2>&1)
+    script_return=$?
+    # echo whithout colors to log file (for the mail)
+    echo -e "$script_output" | sed 's/\x1B\[[0-9;]\{1,\}[A-Za-z]//g' >> "${MAIL_LOG_FILE}"
+    echo -e "$script_output"
+
+    return $script_return
 }

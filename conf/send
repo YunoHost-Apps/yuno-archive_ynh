@@ -22,7 +22,7 @@ readonly THIS_SCRIPT
 #                           MAIN                          #
 #=========================================================#
 
-echo "---------- START SENDING FROM ${THIS_SCRIPT} -----------"
+log "---------- START SENDING FROM ${THIS_SCRIPT} -----------"
 
 set_conf last_run "$(date "+%Y-%m-%d %H:%M:%S")"
 set_conf state ongoing
@@ -40,11 +40,11 @@ fail=false
 case $(get_conf_method) in
 send_to_drive)
     if $is_verbose; then
-        echo "$YUNO_ARCHIVE send drive --log='${YUNO-ARCHIVE_LOG_FILE}' --drive='$( get_conf_repository )' --repository='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
+        log "$YUNO_ARCHIVE send drive --log='${YUNO_ARCHIVE_LOG_FILE}' --drive='$( get_conf_repository )' --repository='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
     fi
 
-    sudo $YUNO_ARCHIVE send drive \
-        --log="${YUNO-ARCHIVE_LOG_FILE}" \
+    execute_cmd sudo $YUNO_ARCHIVE send drive \
+        --log="${YUNO_ARCHIVE_LOG_FILE}" \
         --drive="$( get_conf_repository )" \
         --repository="ynh_archives" \
         --source="${YNH_ARCHIVE_DIR}" \
@@ -52,23 +52,35 @@ send_to_drive)
     ;;
 send_to_rclone)
     if $is_verbose; then
-        echo "$YUNO_ARCHIVE send rclone --log='${YUNO-ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --path='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
+        log "$YUNO_ARCHIVE send rclone --log='${YUNO_ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --path='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
     fi
 
-    sudo $YUNO_ARCHIVE send rclone \
-        --log="${YUNO-ARCHIVE_LOG_FILE}" \
+    execute_cmd sudo $YUNO_ARCHIVE send rclone \
+        --log="${YUNO_ARCHIVE_LOG_FILE}" \
         --repository="$( get_conf_repository )" \
         --path="ynh_archives" \
         --source="${YNH_ARCHIVE_DIR}" \
         "${verbose_option}" || fail=true
     ;;
+
+send_to_scp)
+    if $is_verbose; then
+        log "$YUNO_ARCHIVE send scp --log='${YUNO_ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
+    fi
+
+    execute_cmd sudo $YUNO_ARCHIVE send rclone \
+        --log="${YUNO_ARCHIVE_LOG_FILE}" \
+        --repository="$( get_conf_repository )" \
+        --source="${YNH_ARCHIVE_DIR}" \
+        "${verbose_option}" || fail=true
+    ;;
 *)
-    echo "Unknown method '$METHOD'" >&2
+    log "Unknown method '$METHOD'" >&2
     fail=true
     ;;
 esac
 
-echo "---------- END SENDING FROM ${THIS_SCRIPT} -----------"
+log "---------- END SENDING FROM ${THIS_SCRIPT} -----------"
 
 if $fail; then
     fail

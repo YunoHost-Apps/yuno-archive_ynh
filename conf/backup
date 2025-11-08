@@ -20,37 +20,37 @@ declare -a system=()
 
 # Add system hooks according to configuration
 if [[ $( get_conf save_system_conf ) == "1" ]]; then
-    echo "Conf enabled, add to backup script..."
+    log "Conf enabled, add to backup script..."
 
     for hook in $(filter_hooks conf); do
         system+=("$hook")
-        echo "- Hook '$hook' added"
+        log "- Hook '$hook' added"
     done
 fi
 
 # Add data hook according to configuration (without data_multimedia hook)
 if [[ $( get_conf save_data ) == "1" ]]; then
-    echo "Data enabled, add to backup script..."
+    log "Data enabled, add to backup script..."
 
     for hook in $(filter_hooks data | grep -v 'data_multimedia'); do
         system+=("$hook")
-        echo "- Hook '$hook' added"
+        log "- Hook '$hook' added"
     done
 fi
 
 # Add data multimedia according to configuration
 if [[ $( get_conf save_data_multimedia ) == "1" ]]; then
-    echo "Data multimedia enabled, add to backup script..."
+    log "Data multimedia enabled, add to backup script..."
     disable_nobackup_multimedia
 
     system+=("data_multimedia")
-    echo "- Hook 'data_multimedia' added"
+    log "- Hook 'data_multimedia' added"
 fi
 
 # Add apps according to configuration
 declare -a apps=()
 save_apps=$( get_conf save_apps | tr -d ' ' )
-echo "Add apps to backup script..."
+log "Add apps to backup script..."
 for application in $(sudo ls /etc/yunohost/apps/); do
 
     if ([[ "$save_apps" =~ ^exclude: ]] && grep -wq "$application" <<<"$save_apps") ||
@@ -59,16 +59,16 @@ for application in $(sudo ls /etc/yunohost/apps/); do
     fi
 
     if sudo test ! -f "/etc/yunohost/apps/$application/scripts/backup"; then
-        echo "[WARN] The application $application has no backup script. This app won't be backed up."
+        log "[WARN] The application $application has no backup script. This app won't be backed up."
         continue
     fi
 
     apps+=("$application")
-    echo "- App '$application' added'"
+    log "- App '$application' added'"
 done
 
 if [[ ${#apps[@]} -eq 0 && ${#system[@]} -eq 0 ]]; then
-    error "[WARN] apps and system are empty, nothing to save."
+    log_error "[WARN] apps and system are empty, nothing to save."
     exit 0
 fi
 # Define apps option
@@ -85,8 +85,8 @@ fi
 
 current_date=$(date +"%Y%m%d-%H%M%S")
 if $is_verbose; then
-    echo "yunohost backup create --name '${current_date}___APP__' --method '__APP___app' $option_system $apps_option"
+    log "yunohost backup create --name '${current_date}___APP__' --method '__APP___app' $option_system $apps_option"
 fi
 
-sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" "$option_system" "$apps_option"
+execute_cmd sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" "$option_system" "$apps_option"
 exit $?

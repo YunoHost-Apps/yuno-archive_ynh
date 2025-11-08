@@ -109,7 +109,7 @@ do_backup() {
     local method
     method=$(get_conf_method)
 
-    echo "---------- START BACKUP ${BACKUP_NAME} ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO-ARCHIVE_LOG_FILE}"
+    echo "---------- START BACKUP ${BACKUP_NAME} ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
 
     set_conf last_run "$(date "+%Y-%m-%d %H:%M:%S")"
     set_conf state ongoing
@@ -143,7 +143,7 @@ do_backup() {
     case "$method" in
     local)
         $YUNO_ARCHIVE backup local \
-            --log="${YUNO-ARCHIVE_LOG_FILE}" \
+            --log="${YUNO_ARCHIVE_LOG_FILE}" \
             --repository="${repository}" \
             --name="${name}" \
             --source="$BACKUP_TMP_DIR" \
@@ -158,7 +158,7 @@ do_backup() {
     # We won't fail with send_to_drive method because this method could be called directly in command line
     drive | send_to_drive)
         $YUNO_ARCHIVE backup drive \
-            --log="${YUNO-ARCHIVE_LOG_FILE}" \
+            --log="${YUNO_ARCHIVE_LOG_FILE}" \
             --drive="${repository}" \
             --repository="ynh_archives" \
             --name="${name}" \
@@ -174,9 +174,23 @@ do_backup() {
     # We won't fail with send_to_drive method because this method could be called directly in command line
     rclone | send_to_rclone)
         $YUNO_ARCHIVE backup rclone \
-            --log="${YUNO-ARCHIVE_LOG_FILE}" \
+            --log="${YUNO_ARCHIVE_LOG_FILE}" \
             --repository="${repository}" \
             --path="ynh_archives" \
+            --name="${name}" \
+            --source="$BACKUP_TMP_DIR" \
+            --compress="gzip" \
+            --info="${INFO_FILE}" \
+            --keep="${keep}" \
+            --hook="${HOOK_FILE}" \
+            "${verbose_option}" \
+            "${incremental_option}" ||
+            fail
+        ;;
+    scp | send_to_scp)
+        $YUNO_ARCHIVE backup scp \
+            --log="${YUNO_ARCHIVE_LOG_FILE}" \
+            --repository="${repository}" \
             --name="${name}" \
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
@@ -215,7 +229,7 @@ do_backup() {
     fi
 
     set_conf state successful
-    echo "---------- END BACKUP ${BACKUP_NAME} ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO-ARCHIVE_LOG_FILE}"
+    echo "---------- END BACKUP ${BACKUP_NAME} ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
     return 0
 }
 
