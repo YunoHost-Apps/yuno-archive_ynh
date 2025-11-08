@@ -45,6 +45,7 @@ services = []
         help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository.<br>**SCP** The repository corresponds to a SSH server (using SCP command).<br>**Send to external drive** Only send archives from YunoHost's local backups directory to an external drive. (no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured Rclone repository.(no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured SCP repository.(no new backup created)"
         help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré.<br>**SCP** The dépôt correspond à un serveur SSH (en utilisant la commande SCP).<br>**Send to external drive** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un disque externe. (aucune nouvelle sauvegarde créée)<br>**Send to Rclone** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt Rclone configuré. (aucune nouvelle sauvegarde créée)<br>**Send to SCP** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt SCP configuré. (aucune nouvelle sauvegarde créée)"
 
+        # Local method repository configuration (shown only for local method)
         [main.general.local_repository]
         ask.en = "Local directory"
         ask.fr = "Répertoire local"
@@ -53,6 +54,7 @@ services = []
         help.en = "Enter an existing directory on server"
         help.fr = "Saisir un répertoire existant sur le serveur"
 
+        # Drive method repository configuration (shown only for drive, send_to_drive method)
         [main.general.drive_repository]
         ask.en = "Drive partition"
         ask.fr = "Partition sur un disque"
@@ -60,6 +62,9 @@ services = []
         type = "string"
         help.en = "Enter a partition on a hard drive (e.g. /dev/sdb1).\n**Do not choose a system partition!** (it will be unmounted and then mounted during the backup)\nThe archives will be stored in the **ynh_archives** subdirectory."
         help.fr = "Saisir une partition sur un disque dur (ex : /dev/sdb1).\n**Ne pas choisir une partition du système !** (elle sera démontée puis montée durant le backup)\nLes archives seront stockées dans le sous-répertoire **ynh_archives**."
+        pattern.regexp = '^\/.*$'
+        pattern.error.en = "Drive partition has to be in format `/xxx/xxxx`"
+        pattern.error.fr = "La partition doit être au foramt ou `/xxx/xxxx`"
 
         [main.general.mounted_drive]
         ask.en  = "Mounted drive verification (You should save before)..."
@@ -68,6 +73,7 @@ services = []
         type = "alert"
         style = "info"
 
+        # Rclone method repository configuration (shown only for rclone, send_to_rclone method)
         [main.general.rclone_repository]
         ask.en = "Rclone repo"
         ask.fr = "Dépôt Rclone"
@@ -82,6 +88,7 @@ services = []
         type = "alert"
         style = "info"
 
+        # Scp method repository configuration (shown only for scp, send_to_scp method)
         [main.general.scp_repository]
         ask.en = "SSH server and directory"
         ask.fr = "Serveur SSH et répertoire"
@@ -92,6 +99,8 @@ services = []
         pattern.error.fr = "La chaine doit être au format host:/repertoire/absolu ou user@host:/repertoire/absolu"
         help.en = "Enter destination like **host:/absolute/destination/path** or **user@host:/absolute/destination/path**\nConnection to host as to be passwordless (see help)"
         help.fr = "Saisir la destination sous la forme **host:/repertoire/absolu** ou **user@host:/repertoire/absolu**\nLa connexion au host doit se faire sans mot de passe (voir l'aide)"
+
+        # Incremental configuration
 
         [main.general.is_incremental]
         ask.en = "Incremental backup"

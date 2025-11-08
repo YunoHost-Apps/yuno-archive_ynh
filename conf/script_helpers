@@ -13,20 +13,28 @@ readonly MAIL_LOG_FILE
 # Log file used by yuno-archive script
 readonly YUNO_ARCHIVE_LOG_FILE='/var/log/__APP__/backup.log'
 
-_CONF_METHOD=""
-_CONF_REPOSITORY=""
+# get_conf_method cache var
+_GET_CONF_METHOD_VALUE=""
+# get_conf_repository cache var
+_GET_CONF_REPOSITORY_VALUE=""
+# Flag used to know if an error occured
 _IS_ERROR=false
 
 #=========================================================#
 #                    SCRIPT FUNCTIONS                     #
 #=========================================================#
 
+# Set state to fail and exit script
 fail() {
     set_conf state failed
     exit 1
-
 }
 
+# Get a conf var
+# ARGUMENTS:
+#  $1 : var_name (mandatory)
+# OUTPUTS:
+#   value fetched in stdout
 get_conf() {
     local var_name="$1"
 
@@ -38,6 +46,10 @@ get_conf() {
     sudo yunohost app setting "__APP__" "$var_name"
 }
 
+# Set a conf value
+# ARGUMENTS:
+#   $1 : var_name (mandatory)
+#   $2 : value (mandatory)
 set_conf() {
     local var_name="$1"
     local value="$2"
@@ -50,32 +62,37 @@ set_conf() {
     sudo yunohost app setting "__APP__" "$var_name" -v "$value"
 }
 
+# Get method name in configuration
+# log and fail if method is invalid
+# OUTPUTS:
+#   method value fetched in stdout
+# GLOBALS: 
+# 	_GET_CONF_METHOD_VALUE : Use this var to store value to avoid calling conf multiple times
 get_conf_method() {
-    # Store value in variable to avoid calling conf multiple times
-    #declare -g _CONF_METHOD
-
-    if [[ -z ${_CONF_METHOD:-} ]]; then
-        _CONF_METHOD=$(get_conf method)
+    if [[ -z ${_GET_CONF_METHOD_VALUE} ]]; then
+        _GET_CONF_METHOD_VALUE=$(get_conf method)
     fi
 
-    case "$_CONF_METHOD" in
+    case "$_GET_CONF_METHOD_VALUE" in
     local | drive | send_to_drive | rclone | send_to_rclone | scp | send_to_scp)
-        echo "$_CONF_METHOD"
+        echo "$_GET_CONF_METHOD_VALUE"
         ;;
     *)
-        log_error "get_conf_method: Method '$_CONF_METHOD' from configuration unknown"
+        log_error "get_conf_method: Method '$_GET_CONF_METHOD_VALUE' from configuration unknown"
         fail
     esac
 }
 
 
 # Get repository stored in conf
+# log and fail if method is invalid
+# OUTPUTS:
+#   method value fetched in stdout
+# GLOBALS: 
+# 	_GET_CONF_METHOD_VALUE : Use this var to store value to avoid calling conf multiple times
 get_conf_repository() {
-    # Store value in variable to avoid calling conf multiple times
-    #declare -g _CONF_REPOSITORY
-
-    if [[ -n ${_CONF_REPOSITORY:-} ]]; then
-        echo "$_CONF_REPOSITORY"
+    if [[ -n ${_GET_CONF_REPOSITORY_VALUE} ]]; then
+        echo "$_GET_CONF_REPOSITORY_VALUE"
         return
     fi
 
@@ -87,30 +104,35 @@ get_conf_repository() {
         local is_default_repo=""
         is_default_repo=$(get_conf ynh_repo)
         if [[ $is_default_repo == "0" ]]; then
-            _CONF_REPOSITORY=$(get_conf local_repository)
+            _GET_CONF_REPOSITORY_VALUE=$(get_conf local_repository)
         else
             # Default yunohost archive repository
-            _CONF_REPOSITORY="/home/yunohost.backup/archives"
+            _GET_CONF_REPOSITORY_VALUE="/home/yunohost.backup/archives"
         fi
         ;;
     drive | send_to_drive)
-        _CONF_REPOSITORY=$(get_conf drive_repository)
+        _GET_CONF_REPOSITORY_VALUE=$(get_conf drive_repository)
         ;;
     rclone | send_to_rclone)
-        _CONF_REPOSITORY=$(get_conf rclone_repository)
+        _GET_CONF_REPOSITORY_VALUE=$(get_conf rclone_repository)
         ;;
     scp | send_to_scp)
-        _CONF_REPOSITORY=$(get_conf scp_repository)
+        _GET_CONF_REPOSITORY_VALUE=$(get_conf scp_repository)
         ;;
     *)
         log_error "get_conf_repository: unsupported method '$method'"
+        fail
         ;; 
     esac
 
-    echo "$_CONF_REPOSITORY"
+    echo "$_GET_CONF_REPOSITORY_VALUE"
 }
 
-
+# Send mail according to configuration
+# Delete MAIL_LOG_FILE
+# GLOBALS: 
+# 	YUNO_ARCHIVE_LOG_FILE : yuno-archive log file for user message
+#   MAIL_LOG_FILE : temp log file to inject log messages in mail
 send_mail() {
     local mailalert="never"
     mailalert=$(get_conf mailalert)
@@ -150,7 +172,7 @@ filter_hooks() {
 
 
 # Check if the app is updating or if there is another backup process running
-# PRINT:
+# OUTPUTS:
 #   echo message on stderr
 # RETURNS:
 #   1 if the app is not updating and no other backup process is running
@@ -185,6 +207,7 @@ is_updating_or_running() {
     return 1
 }
 
+# Rename .nobackup files to force multimedia backup
 disable_nobackup_multimedia() {
     # Disable .nobackup file if exists
     if [[ -e /home/yunohost.multimedia/.nobackup ]]; then
@@ -192,7 +215,7 @@ disable_nobackup_multimedia() {
     fi
 }
 
-
+# Restore .nobackup files
 restore_nobackup_multimedia() {
     # restore .nobackup file
     if [[ -e /home/yunohost.multimedia/.nobackup_disabled ]]; then
@@ -210,17 +233,35 @@ hrb() {
     numfmt --to=iec-i --suffix=O --format="%9.2f" "$bytes" | sed s/'^ *\([0-9,\.]*\)\(.*\)'/'\1 \2'/
 }
 
+# Print a message on stdout and in MAIL_LOG_FILE
+# ARGUMENTS:
+# 	$1 (string) message to print
+# OUTPUTS:
+# 	Prints message to stdout
+# GLOBALS:
+#   MAIL_LOG_FILE : used to tend message to temp mail log file
 log() {
     local message="$1"
     echo -e "$message" | tee -a "${MAIL_LOG_FILE}"
 }
 
+# Print a message on stdout and in MAIL_LOG_FILE
+# Set error flag to true
+# ARGUMENTS:
+# 	$1 (string) message to print
+# OUTPUTS:
+# 	Prints message to stdout
+# GLOBALS:
+#   MAIL_LOG_FILE : used to tend message to temp mail log file
 log_error() {
     local message="$1"
     echo -e "$message" | tee -a "${MAIL_LOG_FILE}"
     set_error
 }
 
+# Set error flag to true
+# GLOBALS:
+#   _IS_ERROR : error flag
 set_error() {
     # Global flag to set if is error or not
     #declare -g _IS_ERROR
@@ -230,6 +271,12 @@ set_error() {
     fi
 }
 
+# Check if error flag is set to true
+# GLOBALS:
+#   _IS_ERROR : error flag
+# RETURNS:
+#   0 if error flag is true
+#   1 if error flag is false
 is_error() {
     if [[ -z ${_IS_ERROR:-} || ! ${_IS_ERROR:-false} ]]; then
         return 0
@@ -238,6 +285,11 @@ is_error() {
     return 1
 }
 
+# Execute a command and catch output to MAIL_LOG_FILE
+# ARGUMENTS:
+#    $@ command and arguments to execute
+# RETURNS:
+#   command return value
 execute_cmd() {
     local script_output=""
     local script_return=0

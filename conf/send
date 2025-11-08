@@ -22,8 +22,6 @@ readonly THIS_SCRIPT
 #                           MAIN                          #
 #=========================================================#
 
-log "---------- START SENDING FROM ${THIS_SCRIPT} -----------"
-
 set_conf last_run "$(date "+%Y-%m-%d %H:%M:%S")"
 set_conf state ongoing
 
@@ -79,8 +77,6 @@ send_to_scp)
     fail=true
     ;;
 esac
-
-log "---------- END SENDING FROM ${THIS_SCRIPT} -----------"
 
 if $fail; then
     fail

@@ -8,25 +8,10 @@ ynh_abort_if_errors
 YUNO_ARCHIVE="$install_dir/yuno-archive.sh"
 
 #=================================================
-# SPECIFIC GETTERS FOR TOML SHORT KEY
+# HELPERS
 #=================================================
 
-get__info() {
-    local style="info"
-
-    if [ "${old[state]}" == "failed" ]; then
-        style="danger"
-    elif [ "${old[state]}" == "successful" ]; then
-        style="success"
-    fi
-
-    local -A messages
-    messages[en]="**Backup state**: ${old[state]}<br>**Last run**: ${old[last_run]}"
-    messages[fr]="**État de la sauvegarde** : ${old[state]}<br>**Dernière exécution** : ${old[last_run]}"
-
-    i8n_alert "$style"
-}
-
+# Format message for error in fetching backup list
 echo_error_fetching_last_backups() {
     local repo="$1"
     local -A messages=()
@@ -38,6 +23,7 @@ echo_error_fetching_last_backups() {
     return 0
 }
 
+# Print last backup list in markdown format
 echo_last_backups() {
     local list="$1"
 
@@ -59,6 +45,7 @@ echo_last_backups() {
     return 0
 }
 
+# Get last backups for local method
 fetch_local_backups() {
     local directory="$1"
 
@@ -73,6 +60,7 @@ fetch_local_backups() {
     return 0
 }
 
+# Get last backups for drive method
 fetch_drive_backups() {
     local drive="$1"
 
@@ -89,6 +77,7 @@ fetch_drive_backups() {
     return 0
 }
 
+# Get last backups for rclone method
 fetch_rclone_backups() {
     local repo="$1"
 
@@ -103,6 +92,7 @@ fetch_rclone_backups() {
     return 0
 }
 
+# Get last backups for scp method
 fetch_scp_backups() {
     local repo="$1"
 
@@ -119,6 +109,28 @@ fetch_scp_backups() {
     return 0
 }
 
+#=================================================
+# SPECIFIC GETTERS FOR TOML SHORT KEY
+#=================================================
+
+# Get last backup infos (success or not)
+get__info() {
+    local style="info"
+
+    if [ "${old[state]}" == "failed" ]; then
+        style="danger"
+    elif [ "${old[state]}" == "successful" ]; then
+        style="success"
+    fi
+
+    local -A messages
+    messages[en]="**Backup state**: ${old[state]}<br>**Last run**: ${old[last_run]}"
+    messages[fr]="**État de la sauvegarde** : ${old[state]}<br>**Dernière exécution** : ${old[last_run]}"
+
+    i8n_alert "$style"
+}
+
+# Get last backup value
 get__last_backups() {
 
     local local_repository="/home/yunohost.backup/archives"
@@ -150,6 +162,7 @@ get__last_backups() {
     esac
 }
 
+# Get mount drive info in translted format
 get__mounted_drive() {
     local drive="${old[drive_repository]}"
     if [[ -z $drive ]]; then
@@ -173,6 +186,7 @@ get__mounted_drive() {
     i8n_alert warning
 }
 
+# Get rclone version in translated version
 get__rclone_version() {
     local version
     version=$(rclone --version | grep "^rclone v" | sed s/'rclone v'/''/)
@@ -187,12 +201,15 @@ get__rclone_version() {
 #=================================================
 # SPECIFIC VALIDATORS FOR TOML SHORT KEYS
 #=================================================
+
+# Validate on_calendar value
 validate__on_calendar() {
 
     (systemd-analyze calendar "$on_calendar" >/dev/null) ||
         echo 'Please follow systemd OnCalendar format: https://man.archlinux.org/man/systemd.time.7#CALENDAR_EVENTS'
 }
 
+# Validate if local repository is set and exists in filesystem
 validate__local_repository() {
     if [[ -z $local_repository ]]; then
         echo "Directory cannot be null"
@@ -205,13 +222,7 @@ validate__local_repository() {
     fi
 }
 
-validate__drive_repository() {
-    if [[ -z $drive_repository ]]; then
-        echo "Drive cannot be null"
-        return 0
-    fi
-}
-
+# Validate rclone_repository value and check if is configured
 validate__rclone_repository() {
     if [[ -z $rclone_repository ]]; then
         echo "Rclone repo cannot be null"
@@ -220,22 +231,6 @@ validate__rclone_repository() {
 
     if ! rclone listremotes 2>/dev/null | grep -q "^${rclone_repository}:$"; then
         echo "Rclone repo doesn't exists"
-        return 0
-    fi
-}
-
-validate__keep() {
-    if [[ -z $keep ]]; then
-        echo "keep cannot be null"
-        return 0
-    fi
-
-    if [[ $keep == "all" ]]; then
-        return 0
-    fi
-
-    if echo "$keep" | grep -qv "^[0-9][0-9]*$"; then
-        echo "keep can be only an integer or 'all' value"
         return 0
     fi
 }

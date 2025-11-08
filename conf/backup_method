@@ -8,19 +8,15 @@ source "__INSTALL_DIR__/script_helpers"
 #                     GLOBAL VARS                         #
 #=========================================================#
 
-# Script name and path
-THIS_SCRIPT=$(readlink -f "${BASH_SOURCE[0]}")
-readonly THIS_SCRIPT
-
 # yuno-archive script
 readonly YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
 
 # Params sent by yunohost backup script
 readonly BACKUP_TMP_DIR="$2"
 readonly BACKUP_NAME="$3"
-readonly LOCAL_REPO="$4"
+#" readonly LOCAL_REPO="$4" unused but keep it just in case
 readonly BACKUP_SIZE="$5"
-readonly BACKUP_DESCRIPTION="$6"
+# readonly BACKUP_DESCRIPTION="$6" unused but keep it just in case
 
 # Export tmp dir root to use yunohost.backup (/tmp is often too small to create archive file)
 # We use this in order to avoid multiple temp folder in yunohost.backup dir if app crashes before cleanup
@@ -39,14 +35,12 @@ readonly HOOK_FILE="__INSTALL_DIR__/backup_hook"
 #                    SCRIPT FUNCTIONS                     #
 #=========================================================#
 
-### FUNCTION BEGIN
 # Get backup name, this name is deducted from config
 # If we use an incremental backup we get the last incremental backup number and 
 # determine if this number is over the max incremental number
 # If over incremental number or not incremental, we use BACKUP_NAME
 # OUTPUTS:
 # 	Prints backup name to stdout
-### FUNCTION END
 create_backup_name() {
     if [[ $( get_conf is_incremental ) != "1" ]]; then
         echo "${BACKUP_NAME}"
@@ -73,6 +67,8 @@ create_backup_name() {
     echo "$origin_incremental_name"
 }
 
+# Update increment name to configuration
+# Check conf if incremental and fetch last incremental number to add 1 to value
 update_incremental_name() {
     local name="$1"
 
@@ -105,11 +101,11 @@ do_mount() {
     true
 }
 
+# Execute backup action according to configuration
+# fail if an error occured
 do_backup() {
     local method
     method=$(get_conf_method)
-
-    echo "---------- START BACKUP ${BACKUP_NAME} ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
 
     set_conf last_run "$(date "+%Y-%m-%d %H:%M:%S")"
     set_conf state ongoing
@@ -229,7 +225,6 @@ do_backup() {
     fi
 
     set_conf state successful
-    echo "---------- END BACKUP ${BACKUP_NAME} ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
     return 0
 }
 

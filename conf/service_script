@@ -71,12 +71,15 @@ if [[ ! $FORCE ]]; then
     fi
 fi
 
+method="$( get_conf_method )"
+
+# Add a line to log file in order to identify automatic launch
+sudo echo "---------- START ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
-log "${now} STARTING BACKUP __APP__"
+log "START ${method} for  __APP__ at ${now}"
 
-
-case "$( get_conf_method )" in
+case "$method" in
 send_to_drive | send_to_rclone | send_to_scp)
     "$SEND_SCRIPT" || true
     ;;
@@ -85,7 +88,10 @@ send_to_drive | send_to_rclone | send_to_scp)
     ;;
 esac
 
+# Add a line to log file in order to identify automatic launch
+sudo echo "---------- END ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
+
 now="$(date "+%Y-%m-%d %H:%M:%S")"
-log "${now} END BACKUP __APP__"
+log "END ${method} for  __APP__ at ${now}"
 
 send_mail
