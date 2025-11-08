@@ -25,6 +25,7 @@ ynh_app_setting_set --key="last_run" --value="-"
 ynh_app_setting_set_default --key=debug --value=0
 ynh_app_setting_set_default --key=is_incremental --value=0
 ynh_app_setting_set_default --key=max_incremental_number --value=0
+ynh_app_setting_set_default --key=scp_repository --value=""
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE
