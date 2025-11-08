@@ -75,10 +75,41 @@ To upgrade rclone:
 sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ```
 
-### Automatic deletion of old backups
+## Archive on SCP
+
+SCP backup need a SSH server and use `scp` command which copy data througth SSH protocol.
+You need to configure a SSH connexion without password (using key authentication)
+
+You can simply create this with thoses commands :
+```bash
+# Create key pair for root user
+sudo ssh-keygen
+
+# send root public key to the host
+sudo ssh-copy-id user@host
+```
+
+## Automatic deletion of old backups
 
 During the backup process, if there is not enough space on the destination, the script can automatically delete old backups.
 If you choose to keep all backups, this action will be disabled.
 
 Otherwise, you can determine the minimum number of backups to keep.
 In this case, the process will delete old backups (starting with the oldest) until there is enough space on the destination, while ensuring the minimum number of backups chosen is kept.
+
+## Incremental Backups
+
+Incremental backups work as follows:
+
+- The first backup is a full backup containing all files to be backed up.
+- Subsequent backups only back up files modified since the first full backup.
+- Subsequent backups only back up files modified since the previous incremental backup.
+
+You must define a maximum number of increments before the script performs another full backup.
+
+Full backups will be named ...base.tar.gz and incremental backups ...inc0-9.tar.gz.
+
+For example, if you define an incremental backup that runs once a day with a maximum of 6 increments, you will get:
+- 1 full backup (e.g., on Monday)
+- 6 incremental backups based on this full backup (Tuesday through Sunday)
+- a new full backup the following week.

@@ -25,6 +25,8 @@ chmod ug+rx "$install_dir/yuno-archive.sh"
 chmod ug+rx "$install_dir/backup"
 chmod ug+rx "$install_dir/backup_hook"
 chmod ug+rx "$install_dir/send"
+chmod ug+rx "$install_dir/systemd_start"
+chmod +r "$install_dir/script_helpers"
 
 #=================================================
 # RESTORE BACKUP METHODS

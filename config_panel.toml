@@ -38,11 +38,14 @@ services = []
         choices.local = "Local filesystem"
         choices.drive = "External drive"
         choices.rclone = "Rclone"
+        choices.scp = "SCP"
         choices.send_to_drive = "Send to external drive"
         choices.send_to_rclone = "Send to Rclone"
-        help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository.<br>**Send to external drive** Only send archives from YunoHost's local backups directory to an external drive. (no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured Rclone repository.(no new backup created)"
-        help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré.<br>**Send to external drive** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un disque externe. (aucune nouvelle sauvegarde créée)<br>**Send to Rclone** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt Rclone configuré. (aucune nouvelle sauvegarde créée)"
+        choices.send_to_scp = "Send to SCP"
+        help.en = "**Local filesystem** The repository corresponds to a folder on the server.<br>**External drive** The repository corresponds to a partition on a disk that will be mounted and then unmounted during the backup.<br>**Rclone** The repository corresponds to a configured Rclone repository.<br>**SCP** The repository corresponds to a SSH server (using SCP command).<br>**Send to external drive** Only send archives from YunoHost's local backups directory to an external drive. (no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured Rclone repository.(no new backup created)<br>**Send to Rclone** Only send archives from YunoHost's local backups directory to a configured SCP repository.(no new backup created)"
+        help.fr = "**Local filesystem** le dépôt correspond à un dossier sur le serveur.<br>**External drive** le dépôt correspond à une partition sur un disque qui sera monté puis démonté durant le backup.<br>**Rclone** le dépot correspond à un dépôt Rclone configuré.<br>**SCP** The dépôt correspond à un serveur SSH (en utilisant la commande SCP).<br>**Send to external drive** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un disque externe. (aucune nouvelle sauvegarde créée)<br>**Send to Rclone** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt Rclone configuré. (aucune nouvelle sauvegarde créée)<br>**Send to SCP** Envoie uniquement les archives du répertoire de sauvegardes locales de YunoHost vers un dépôt SCP configuré. (aucune nouvelle sauvegarde créée)"
 
+        # Local method repository configuration (shown only for local method)
         [main.general.local_repository]
         ask.en = "Local directory"
         ask.fr = "Répertoire local"
@@ -51,6 +54,7 @@ services = []
         help.en = "Enter an existing directory on server"
         help.fr = "Saisir un répertoire existant sur le serveur"
 
+        # Drive method repository configuration (shown only for drive, send_to_drive method)
         [main.general.drive_repository]
         ask.en = "Drive partition"
         ask.fr = "Partition sur un disque"
@@ -58,6 +62,9 @@ services = []
         type = "string"
         help.en = "Enter a partition on a hard drive (e.g. /dev/sdb1).\n**Do not choose a system partition!** (it will be unmounted and then mounted during the backup)\nThe archives will be stored in the **ynh_archives** subdirectory."
         help.fr = "Saisir une partition sur un disque dur (ex : /dev/sdb1).\n**Ne pas choisir une partition du système !** (elle sera démontée puis montée durant le backup)\nLes archives seront stockées dans le sous-répertoire **ynh_archives**."
+        pattern.regexp = '^\/.*$'
+        pattern.error.en = "Drive partition has to be in format `/xxx/xxxx`"
+        pattern.error.fr = "La partition doit être au foramt ou `/xxx/xxxx`"
 
         [main.general.mounted_drive]
         ask.en  = "Mounted drive verification (You should save before)..."
@@ -66,6 +73,7 @@ services = []
         type = "alert"
         style = "info"
 
+        # Rclone method repository configuration (shown only for rclone, send_to_rclone method)
         [main.general.rclone_repository]
         ask.en = "Rclone repo"
         ask.fr = "Dépôt Rclone"
@@ -79,6 +87,37 @@ services = []
         visible = "!ynh_repo && ( method == 'rclone' || method == 'send_to_rclone' )"
         type = "alert"
         style = "info"
+
+        # Scp method repository configuration (shown only for scp, send_to_scp method)
+        [main.general.scp_repository]
+        ask.en = "SSH server and directory"
+        ask.fr = "Serveur SSH et répertoire"
+        visible = "!ynh_repo && ( method == 'scp' || method == 'send_to_scp' )"
+        type = "string"
+        pattern.regexp = '^([a-zA-Z0-9._-]+@)?[a-zA-Z0-9._-]+:/.+$'
+        pattern.error.en = "String as to be in format host:/absolute/destination/path or user@host:/absolute/destination/path"
+        pattern.error.fr = "La chaine doit être au format host:/repertoire/absolu ou user@host:/repertoire/absolu"
+        help.en = "Enter destination like **host:/absolute/destination/path** or **user@host:/absolute/destination/path**\nConnection to host as to be passwordless (see help)"
+        help.fr = "Saisir la destination sous la forme **host:/repertoire/absolu** ou **user@host:/repertoire/absolu**\nLa connexion au host doit se faire sans mot de passe (voir l'aide)"
+
+        # Incremental configuration
+
+        [main.general.is_incremental]
+        ask.en = "Incremental backup"
+        ask.fr = "Sauvegarde Incrémentale"
+        visible = "method != 'send_to_drive' && method != 'send_to_rclone' && method != 'send_to_scp'"
+        type = "boolean"
+        help.en = "`Yes` Incremental backups will be performed which can save more space but need to get full and increments backups to be restored manually."
+        help.fr = "`Oui` Des sauvegardes incrémentales seront réalisées ce qui permet de sauvegarder beaucoup de place mais nécessitera de réaliser une restauration manuelle à partir du backup complet avec ses incréments."
+
+        [main.general.max_incremental_number]
+        ask.en = "Max increments"
+        ask.fr = "Incréments maximums"
+        visible = "is_incremental"
+        type = "number"
+        help.en = "Maximum number of increments before doing a new complete backup."
+        help.fr = "Nombre maximum d'increments avant de réaliser une nouvelle sauvegarde complète."
+
 
         [main.general.on_calendar]
         ask.en = "When and at which frequency should the backups be performed?"
@@ -105,6 +144,9 @@ services = []
         help.en = "Enter `all` to keep all archives for each backup.<br>Enter an integer between `0 and n` to delete old archives if space is needed (`0` can delete everything, `n` will keep at least `n`)"
         help.fr = "Saisir `all` pour conserver toutes les archives à chaque sauvegarde.<br>Saisir un entier entre `0 et n` pour supprimer les anciennes archives si on a besoin de place (`0` peut tout supprimer, `n` en conservera minimum `n`)"
         type = "string"
+        pattern.regexp = '^(all)|([0-9]+)$'
+        pattern.error.en = "Value has to be a number or `all`"
+        pattern.error.fr = "La valeur doit être un nombre ou `all`"
 
         [main.general.debug]
         ask.en = "Debug mode"
@@ -117,7 +159,7 @@ services = []
     [main.content]
     name.en = "What should be backed up?"
     name.fr = "Qu'est ce qui devrait être sauvegardé ?"
-    visible = "method != 'send_to_rclone' && method != 'send_to_drive'"
+    visible = "method != 'send_to_rclone' && method != 'send_to_drive' && method != 'send_to_scp'"
     optional = false
 
         [main.content.save_system_conf]

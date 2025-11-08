@@ -3,90 +3,84 @@
 # Script used to send archives directly to a remote repo according to configuration
 # Using yuno_archive script. This script is not called from yunohost backup system
 
+source "__INSTALL_DIR__/script_helpers"
 
 # Fail on error
 set -Eeuo pipefail
 
-#=========================================================#
-#                     GLOBAL VARS                         #
-#=========================================================#
-
-# This script
-declare -r THIS_SCRIPT="$(readlink -f "${BASH_SOURCE}")"
-
 # yuno-archive script
-declare -r YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
+readonly YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
 
-# log file
-declare -r LOG='/var/log/__APP__/backup.log'
+# yunohost archives dir
+readonly YNH_ARCHIVE_DIR="/home/yunohost.backup/archives"
 
-# App config
-LOCAL_REPOSITORY="/home/yunohost.backup/archives"
-DRIVE_REPOSITORY=$(yunohost app setting "__APP__" drive_repository)
-RCLONE_REPOSITORY=$(yunohost app setting "__APP__" rclone_repository)
-METHOD=$(yunohost app setting "__APP__" method)
-
-# Verbose flag 1 = true, 0 = false
-VERBOSE=$(yunohost app setting "__APP__" debug)
-
-#=========================================================#
-#                    SCRIPT FUNCTIONS                     #
-#=========================================================#
-
-fail() {
-    yunohost app setting "__APP__" state -v "failed"
-    exit 1
-}
+# Script name and path
+THIS_SCRIPT=$(readlink -f "${BASH_SOURCE[0]}")
+readonly THIS_SCRIPT
 
 #=========================================================#
 #                           MAIN                          #
 #=========================================================#
 
-echo "---------- START SENDING FROM ${THIS_SCRIPT} -----------" >> "$LOG"
+set_conf last_run "$(date "+%Y-%m-%d %H:%M:%S")"
+set_conf state ongoing
 
-yunohost app setting "__APP__" last_run -v "$(date "+%Y-%m-%d %H:%M:%S")"
-yunohost app setting "__APP__" state -v "ongoing"
-
+is_verbose=false
 verbose_option=""
-if [[ $VERBOSE == "1" ]]; then
+
+if [[ $( get_conf debug ) == "1" ]]; then
     verbose_option="--verbose"
+    is_verbose=true
 fi
 
+fail=false
 
-case "$METHOD" in
+case $(get_conf_method) in
 send_to_drive)
-    if [[ $VERBOSE == "1" ]]; then
-        echo "$YUNO_ARCHIVE send drive --log='$LOG' --drive='$DRIVE_REPOSITORY' --repository='ynh_archives' --source='$LOCAL_REPOSITORY' ${verbose_option}"
+    if $is_verbose; then
+        log "$YUNO_ARCHIVE send drive --log='${YUNO_ARCHIVE_LOG_FILE}' --drive='$( get_conf_repository )' --repository='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
     fi
 
-    $YUNO_ARCHIVE send drive \
-        --log="$LOG" \
-        --drive="$DRIVE_REPOSITORY" \
+    execute_cmd sudo $YUNO_ARCHIVE send drive \
+        --log="${YUNO_ARCHIVE_LOG_FILE}" \
+        --drive="$( get_conf_repository )" \
         --repository="ynh_archives" \
-        --source="$LOCAL_REPOSITORY" \
-        "${verbose_option}" ||
-        fail
+        --source="${YNH_ARCHIVE_DIR}" \
+        "${verbose_option}" || fail=true
     ;;
 send_to_rclone)
-    if [[ $VERBOSE == "1" ]]; then
-        echo "$YUNO_ARCHIVE send rclone --log='$LOG' --repository='$RCLONE_REPOSITORY' --path='ynh_archives' --source='$LOCAL_REPOSITORY' ${verbose_option}"
+    if $is_verbose; then
+        log "$YUNO_ARCHIVE send rclone --log='${YUNO_ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --path='ynh_archives' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
     fi
 
-    $YUNO_ARCHIVE send rclone \
-        --log="$LOG" \
-        --repository="$RCLONE_REPOSITORY" \
+    execute_cmd sudo $YUNO_ARCHIVE send rclone \
+        --log="${YUNO_ARCHIVE_LOG_FILE}" \
+        --repository="$( get_conf_repository )" \
         --path="ynh_archives" \
-        --source="$LOCAL_REPOSITORY" \
-        "${verbose_option}" ||
-        fail
+        --source="${YNH_ARCHIVE_DIR}" \
+        "${verbose_option}" || fail=true
+    ;;
+
+send_to_scp)
+    if $is_verbose; then
+        log "$YUNO_ARCHIVE send scp --log='${YUNO_ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
+    fi
+
+    execute_cmd sudo $YUNO_ARCHIVE send scp \
+        --log="${YUNO_ARCHIVE_LOG_FILE}" \
+        --repository="$( get_conf_repository )" \
+        --source="${YNH_ARCHIVE_DIR}" \
+        "${verbose_option}" || fail=true
     ;;
 *)
-    echo "Unknown method '$METHOD'" >&2
-    fail
+    log "Unknown method '$METHOD'" >&2
+    fail=true
     ;;
 esac
 
-yunohost app setting "__APP__" state -v "successful"
-
-echo "---------- END SENDING FROM ${THIS_SCRIPT} -----------" >> "$LOG"
+if $fail; then
+    fail
+else
+    set_conf state successful
+fi
 exit 0

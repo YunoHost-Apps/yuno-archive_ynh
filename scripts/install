@@ -21,9 +21,12 @@ ynh_app_setting_set --key=keep --value="all"
 ynh_app_setting_set --key=local_repository --value=""
 ynh_app_setting_set --key=drive_repository --value=""
 ynh_app_setting_set --key=rclone_repository --value=""
+ynh_app_setting_set --key=scp_repository --value=""
 ynh_app_setting_set --key=save_system_conf --value="1"
 ynh_app_setting_set --key=save_data_multimedia --value="0"
 ynh_app_setting_set --key=debug --value="0"
+ynh_app_setting_set --key=is_incremental --value="0"
+ynh_app_setting_set --key=max_incremental_number --value=""
 
 #=================================================
 # INSTALL RCLONE
@@ -68,6 +71,15 @@ chmod ug+rx "$install_dir/backup_hook"
 ynh_config_add --template="send" --destination="$install_dir/send"
 chown "$app:$app" "$install_dir/send"
 chmod ug+rx "$install_dir/send"
+
+ynh_config_add --template="service_script" --destination="$install_dir/systemd_start"
+chown "$app:$app" "$install_dir/systemd_start"
+chmod ug+rx "$install_dir/systemd_start"
+
+ynh_config_add --template="script_helpers" --destination="$install_dir/script_helpers"
+chown "$app:$app" "$install_dir/script_helpers"
+chmod +r "$install_dir/script_helpers"
+
 
 ynh_config_add --template="sudoer" --destination="/etc/sudoers.d/$app"
 chown root:root "/etc/sudoers.d/$app"
