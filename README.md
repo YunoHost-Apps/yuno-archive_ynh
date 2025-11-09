@@ -10,7 +10,7 @@ It shall NOT be edited by hand.
 
 Extend functionnality of built-in yunoHost backup system
 
-[![Version: 0.4.0~ynh3](https://img.shields.io/badge/Version-0.4.0~ynh3-rgb(18,138,11)?style=for-the-badge)](https://ci-apps.yunohost.org/ci/apps/yuno-archive/)
+[![Version: 0.4.0~ynh4](https://img.shields.io/badge/Version-0.4.0~ynh4-rgb(18,138,11)?style=for-the-badge)](https://ci-apps.yunohost.org/ci/apps/yuno-archive/)
 
 <div align="center">
 <a href="https://apps.yunohost.org/app/yuno-archive"><img height="100px" src="https://github.com/YunoHost/yunohost-artwork/raw/refs/heads/main/badges/neopossum-badges/badge_more_info_on_the_appstore.svg"/></a>
