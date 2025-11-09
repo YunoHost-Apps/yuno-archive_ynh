@@ -144,7 +144,7 @@ send_mail() {
     local method="unknown"
     method=$(get_conf_method)
 
-    if [[ $IS_ERROR && $mailalert != "never" ]]; then
+    if is_error && [[ $mailalert != "never" ]]; then
         cat <(echo -e "${msg_log}\n") "$MAIL_LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ failed onto $repository" admins
     elif [[ $mailalert == "always" ]]; then
         mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ succeeded onto $repository" admins <"$MAIL_LOG_FILE"
