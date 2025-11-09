@@ -7,7 +7,7 @@ name = "Yuno Archive"
 description.en = "Extend functionnality of built-in yunoHost backup system"
 description.fr = "Étend les fonctionnalités du backup fourni par YunoHost en permettant la sauvegarde auto à intervales régulières et l'envoi sur distant via Rclone"
 
-version = "0.4.0~ynh2"
+version = "0.4.0~ynh3"
 
 maintainers = ["Mistermasque"]
 

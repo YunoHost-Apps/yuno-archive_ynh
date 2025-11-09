@@ -66,7 +66,14 @@ done
 if [[ ! $FORCE ]]; then
     if is_updating_or_running; then
         log_error "[ERROR] There is another backup process running or app in updating state. Abord.\nIf the problem persist after reboot, call '$THIS_SCRIPT' with -f option"
-        send_mail
+        # We send mail in this only if debug is true
+        if [[ $( get_conf debug ) == "1" ]]; then
+            send_mail
+        else
+            # Don't forget to delete temp file (send_mail do it)
+            rm -f "$MAIL_LOG_FILE"
+        fi
+        
         exit 1
     fi
 fi
