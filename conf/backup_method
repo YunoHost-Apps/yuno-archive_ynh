@@ -114,7 +114,7 @@ do_backup() {
     available_space_in_temp=$(findmnt --target "$YARCH_TMPDIR" --output AVAIL --bytes --noheadings --first-only)
     if [[ $BACKUP_SIZE -gt $available_space_in_temp ]]; then
         echo "ERROR : Not enough space to create temp archive (space needed = $(hrb "${BACKUP_SIZE}") available space in temp ($YARCH_TMPDIR) = $(hrb "${available_space_in_temp}"))" >&2
-        fail
+        fail_and_exit
     fi
 
     local verbose_option=""
@@ -149,7 +149,7 @@ do_backup() {
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||
-            fail
+            fail_and_exit
         ;;
     # We won't fail with send_to_drive method because this method could be called directly in command line
     drive | send_to_drive)
@@ -165,7 +165,7 @@ do_backup() {
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||
-            fail
+            fail_and_exit
         ;;
     # We won't fail with send_to_drive method because this method could be called directly in command line
     rclone | send_to_rclone)
@@ -181,7 +181,7 @@ do_backup() {
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||
-            fail
+            fail_and_exit
         ;;
     scp | send_to_scp)
         $YUNO_ARCHIVE backup scp \
@@ -195,11 +195,11 @@ do_backup() {
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||
-            fail
+            fail_and_exit
         ;;
     *)
         echo "Unknown method '$method'" >&2
-        fail
+        fail_and_exit
         ;;
     esac
 

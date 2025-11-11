@@ -2,8 +2,7 @@
 
 # Script used to send archives directly to a remote repo according to configuration
 # Using yuno_archive script. This script is not called from yunohost backup system
-
-source "__INSTALL_DIR__/script_helpers"
+# This script is sourced directly from systemd_script
 
 # Fail on error
 set -Eeuo pipefail
@@ -13,10 +12,6 @@ readonly YUNO_ARCHIVE='__INSTALL_DIR__/yuno-archive.sh'
 
 # yunohost archives dir
 readonly YNH_ARCHIVE_DIR="/home/yunohost.backup/archives"
-
-# Script name and path
-THIS_SCRIPT=$(readlink -f "${BASH_SOURCE[0]}")
-readonly THIS_SCRIPT
 
 #=========================================================#
 #                           MAIN                          #
@@ -73,7 +68,7 @@ send_to_scp)
         "${verbose_option}" || fail=true
     ;;
 *)
-    log "Unknown method '$METHOD'" >&2
+    log_error "Unknown method '$METHOD'"
     fail=true
     ;;
 esac
@@ -83,4 +78,3 @@ if $fail; then
 else
     set_conf state successful
 fi
-exit 0

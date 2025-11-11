@@ -24,10 +24,23 @@ _IS_ERROR=false
 #                    SCRIPT FUNCTIONS                     #
 #=========================================================#
 
-# Set state to fail and exit script
+# Set state to fail only
 fail() {
     set_conf state failed
+}
+
+# Set state to fail and exit script
+fail_and_exit() {
+    set_conf state failed
     exit 1
+}
+
+get_app_name() {
+    sudo yunohost app info "__APP__" | grep "^name:" | sed s/'^name: *'//
+}
+
+get_app_version() {
+    sudo yunohost app info "__APP__" | grep "^version:" | sed s/'^version: *'//
 }
 
 # Get a conf var
@@ -40,7 +53,7 @@ get_conf() {
 
     if [[ -z $var_name ]]; then
         log_error "get_conf: var_name cannot be empty"
-        fail
+        fail_and_exit
     fi
 
     sudo yunohost app setting "__APP__" "$var_name"
@@ -56,7 +69,7 @@ set_conf() {
 
     if [[ -z $var_name || -z $value ]]; then
         log_error "get_conf: var_name '$var_name' or value '$value' cannot be empty"
-        fail
+        fail_and_exit
     fi
 
     sudo yunohost app setting "__APP__" "$var_name" -v "$value"
@@ -79,7 +92,7 @@ get_conf_method() {
         ;;
     *)
         log_error "get_conf_method: Method '$_GET_CONF_METHOD_VALUE' from configuration unknown"
-        fail
+        fail_and_exit
     esac
 }
 
@@ -121,7 +134,7 @@ get_conf_repository() {
         ;;
     *)
         log_error "get_conf_repository: unsupported method '$method'"
-        fail
+        fail_and_exit
         ;; 
     esac
 
@@ -144,10 +157,10 @@ send_mail() {
     local method="unknown"
     method=$(get_conf_method)
 
-    if [[ $IS_ERROR && $mailalert != "never" ]]; then
+    if is_error && [[ $mailalert != "never" ]]; then
         cat <(echo -e "${msg_log}\n") "$MAIL_LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ failed onto $repository" admins
     elif [[ $mailalert == "always" ]]; then
-        mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ succeeded onto $repository" admins <"$MAIL_LOG_FILE"
+        cat <(echo -e "${msg_log}\n") "$MAIL_LOG_FILE" | mail -a "Content-Type: text/plain; charset=UTF-8" -s "[Yuno-archive] Backup $method __APP__ succeeded onto $repository" admins
     fi
 
     rm -rf "$MAIL_LOG_FILE"
@@ -164,7 +177,7 @@ filter_hooks() {
 
     if [[ $hook_type != 'conf' && $hook_type != 'data' ]]; then
         log_error "filter_hooks: hook-type '$hook_type' unknown"
-        fail
+        fail_and_exit
     fi
 
     sudo ls /usr/share/yunohost/hooks/backup/ /etc/yunohost/hooks.d/backup/ 2>>/dev/null | grep "\-${hook_type}_" | cut -d"-" -f2 | uniq || true
@@ -199,7 +212,6 @@ is_updating_or_running() {
         diff=$((now_epoch - timestamp_epoch))
 
         if [[ $diff -lt 300 ]]; then
-            log_error "The app was updated less than 5 minutes ago, this is an unvoluntary backup."
             return 0
         fi
     fi
