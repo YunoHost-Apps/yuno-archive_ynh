@@ -74,7 +74,7 @@ if [[ ! $FORCE ]]; then
             rm -f "$MAIL_LOG_FILE"
         fi
         
-        # We exit success in order to not alert fail service
+        # We exit success in order to not fail systemd service
         exit 0
     fi
 fi

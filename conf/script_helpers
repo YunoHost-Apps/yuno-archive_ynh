@@ -275,12 +275,7 @@ log_error() {
 # GLOBALS:
 #   _IS_ERROR : error flag
 set_error() {
-    # Global flag to set if is error or not
-    #declare -g _IS_ERROR
-
-    if [[ -z ${_IS_ERROR:-} ]]; then
-        _IS_ERROR=true
-    fi
+    _IS_ERROR=true
 }
 
 # Check if error flag is set to true
@@ -290,7 +285,7 @@ set_error() {
 #   0 if error flag is true
 #   1 if error flag is false
 is_error() {
-    if [[ -z ${_IS_ERROR:-} || ! ${_IS_ERROR:-false} ]]; then
+    if $_IS_ERROR; then
         return 0
     fi
 
