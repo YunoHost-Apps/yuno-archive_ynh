@@ -74,31 +74,37 @@ if [[ ! $FORCE ]]; then
             rm -f "$MAIL_LOG_FILE"
         fi
         
-        exit 1
+        # We exit success in order to not fail systemd service
+        exit 0
     fi
 fi
 
+name="$( get_app_name )"
 method="$( get_conf_method )"
 
 # Add a line to log file in order to identify automatic launch
-sudo echo "---------- START ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
+sudo echo "---------- START ${name} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}" > /dev/null
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
-log "START ${method} for  __APP__ at ${now}"
+log "START ${name} (${method}) at ${now}"
+
+log "Version : $( get_app_version )"
 
 case "$method" in
 send_to_drive | send_to_rclone | send_to_scp)
-    "$SEND_SCRIPT" || true
+    # shellcheck source=./send
+    source "$SEND_SCRIPT"
     ;;
 *)
-    "$BACKUP_SCRIPT" || true
+    # shellcheck source=./backup
+    source "$BACKUP_SCRIPT"
     ;;
 esac
 
 # Add a line to log file in order to identify automatic launch
-sudo echo "---------- END ${method} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}"
+sudo echo "---------- END ${name} FROM ${THIS_SCRIPT} -----------" | tee -a "${YUNO_ARCHIVE_LOG_FILE}" > /dev/null
 
 now="$(date "+%Y-%m-%d %H:%M:%S")"
-log "END ${method} for  __APP__ at ${now}"
+log "END ${name} (${method}) at ${now}"
 
 send_mail

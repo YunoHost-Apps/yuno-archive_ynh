@@ -2,8 +2,7 @@
 
 # Script used to launch yunohost backup method according to configuration
 # It prepares options for backup method (elements to save)
-
-source "__INSTALL_DIR__/script_helpers"
+# This script is sourced directly from systemd_script
 
 
 #=========================================================#
@@ -89,4 +88,3 @@ if $is_verbose; then
 fi
 
 execute_cmd sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" "$option_system" "$apps_option"
-exit $?
