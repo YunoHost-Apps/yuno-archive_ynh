@@ -87,4 +87,4 @@ if $is_verbose; then
     log "yunohost backup create --name '${current_date}___APP__' --method '__APP___app' $option_system $apps_option"
 fi
 
-execute_cmd sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" "$option_system" "$apps_option"
+execute_cmd sudo yunohost backup create --name "${current_date}___APP__" --method "__APP___app" "$option_system" "$apps_option" || set_error
