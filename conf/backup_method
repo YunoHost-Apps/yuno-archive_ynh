@@ -213,10 +213,12 @@ do_backup() {
 
         if [[ $( get_conf is_incremental ) == '1' ]]; then
             # last_incremental_number as been updated by update_incremental_name
-            if [[ $( get_conf last_incremental_number ) == "0" ]]; then
+            local last_incremental_number
+            last_incremental_number=$( get_conf last_incremental_number )
+            if [[ $last_incremental_number == "0" ]]; then
                 increment_suffix_name='.base'
             else
-                increment_suffix_name=".inc${new_incremental_number}"
+                increment_suffix_name=".inc${last_incremental_number}"
             fi
         fi
 
