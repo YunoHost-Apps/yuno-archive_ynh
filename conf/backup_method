@@ -127,14 +127,26 @@ do_backup() {
         incremental_option="--incremental"
     fi
 
-    local keep
-    keep=$( get_conf keep )
+    local min
+    min=$( get_conf min )
+
+    local max
+    max=$( get_conf max )
 
     local repository
     repository=$( get_conf_repository )
 
     local name
     name=$( create_backup_name )
+
+    local scp_port_option=""
+    if [[ "$method" == "scp" || "$method" == "send_to_scp" ]]; then
+        local scp_port
+        scp_port=$( get_conf scp_port )
+        if [[ -n "$scp_port" ]]; then
+            scp_port_option="--port=${scp_port}"
+        fi
+    fi
 
     case "$method" in
     local)
@@ -145,7 +157,8 @@ do_backup() {
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
             --info="${INFO_FILE}" \
-            --keep="${keep}" \
+            --min="${min}" \
+            --max="${max}" \
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||
@@ -161,7 +174,8 @@ do_backup() {
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
             --info="${INFO_FILE}" \
-            --keep="${keep}" \
+            --min="${min}" \
+            --max="${max}" \
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||
@@ -177,7 +191,8 @@ do_backup() {
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
             --info="${INFO_FILE}" \
-            --keep="${keep}" \
+            --min="${min}" \
+            --max="${max}" \
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||
@@ -187,11 +202,13 @@ do_backup() {
         $YUNO_ARCHIVE backup scp \
             --log="${YUNO_ARCHIVE_LOG_FILE}" \
             --repository="${repository}" \
+            "${scp_port_option}" \
             --name="${name}" \
             --source="$BACKUP_TMP_DIR" \
             --compress="gzip" \
             --info="${INFO_FILE}" \
-            --keep="${keep}" \
+            --min="${min}" \
+            --max="${max}" \
             --hook="${HOOK_FILE}" \
             "${verbose_option}" \
             "${incremental_option}" ||

@@ -26,6 +26,16 @@ ynh_app_setting_set_default --key=debug --value=0
 ynh_app_setting_set_default --key=is_incremental --value=0
 ynh_app_setting_set_default --key=max_incremental_number --value=0
 ynh_app_setting_set_default --key=scp_repository --value=""
+ynh_app_setting_set_default --key=scp_port --value="22"
+
+old_keep="$(ynh_app_setting_get --key=keep 2>/dev/null || true)"
+if [[ -n "$old_keep" ]]; then
+	ynh_app_setting_set --key=min --value="$old_keep"
+else
+	ynh_app_setting_set_default --key=min --value="all"
+fi
+ynh_app_setting_set_default --key=max --value="all"
+ynh_app_setting_delete --key=keep || true
 
 #=================================================
 # DOWNLOAD, CHECK AND UNPACK SOURCE

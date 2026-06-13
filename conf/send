@@ -30,6 +30,14 @@ fi
 
 fail=false
 
+scp_port_option=""
+if [[ $(get_conf_method) == "send_to_scp" ]]; then
+    scp_port=$( get_conf scp_port )
+    if [[ -n "$scp_port" ]]; then
+        scp_port_option="--port=${scp_port}"
+    fi
+fi
+
 case $(get_conf_method) in
 send_to_drive)
     if $is_verbose; then
@@ -58,12 +66,13 @@ send_to_rclone)
 
 send_to_scp)
     if $is_verbose; then
-        log "$YUNO_ARCHIVE send scp --log='${YUNO_ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
+        log "$YUNO_ARCHIVE send scp --log='${YUNO_ARCHIVE_LOG_FILE}' --repository='$( get_conf_repository )' ${scp_port_option} --source='${YNH_ARCHIVE_DIR}' ${verbose_option}"
     fi
 
     execute_cmd sudo $YUNO_ARCHIVE send scp \
         --log="${YUNO_ARCHIVE_LOG_FILE}" \
         --repository="$( get_conf_repository )" \
+        "${scp_port_option}" \
         --source="${YNH_ARCHIVE_DIR}" \
         "${verbose_option}" || fail=true
     ;;
