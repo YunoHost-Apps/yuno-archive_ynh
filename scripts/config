@@ -95,9 +95,15 @@ fetch_rclone_backups() {
 # Get last backups for scp method
 fetch_scp_backups() {
     local repo="$1"
+    local port="${2:-}"
+
+    local port_option=""
+    if [[ -n "$port" ]]; then
+        port_option="--port=${port}"
+    fi
 
     local list
-    list=$($YUNO_ARCHIVE list scp --repository="$repo" --sort=newerfirst --full --human_readable 2>&1)
+    list=$($YUNO_ARCHIVE list scp --repository="$repo" "${port_option}" --sort=newerfirst --full --human_readable 2>&1)
 
     # yuno-archive echo ❌ emoji for errors
     if echo "$list" | grep -q "❌"; then
@@ -140,6 +146,7 @@ get__last_backups() {
     local drive_repository="${old[drive_repository]}"
     local rclone_repository="${old[rclone_repository]}"
     local scp_repository="${old[scp_repository]}"
+    local scp_port="${old[scp_port]}"
     local method="${old[method]}"
 
     case "$method" in
@@ -153,7 +160,7 @@ get__last_backups() {
         fetch_rclone_backups "$rclone_repository"
         ;;
     scp | send_to_scp)
-        fetch_scp_backups "$scp_repository"
+        fetch_scp_backups "$scp_repository" "$scp_port"
         ;;
     *)
         echo_error_fetching_last_backups ""
@@ -231,6 +238,18 @@ validate__rclone_repository() {
 
     if ! rclone listremotes 2>/dev/null | grep -q "^${rclone_repository}:$"; then
         echo "Rclone repo doesn't exists"
+        return 0
+    fi
+}
+
+# Validate scp_port value
+validate__scp_port() {
+    if [[ -z $scp_port ]]; then
+        return 0
+    fi
+
+    if ! [[ $scp_port =~ ^[0-9]+$ ]] || [[ $scp_port -lt 1 || $scp_port -gt 65535 ]]; then
+        echo "SCP port must be between 1 and 65535"
         return 0
     fi
 }

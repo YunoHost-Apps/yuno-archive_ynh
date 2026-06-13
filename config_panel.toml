@@ -100,6 +100,14 @@ services = []
         help.en = "Enter destination like **host:/absolute/destination/path** or **user@host:/absolute/destination/path**\nConnection to host as to be passwordless (see help)"
         help.fr = "Saisir la destination sous la forme **host:/repertoire/absolu** ou **user@host:/repertoire/absolu**\nLa connexion au host doit se faire sans mot de passe (voir l'aide)"
 
+        [main.general.scp_port]
+        ask.en = "SSH port"
+        ask.fr = "Port SSH"
+        visible = "!ynh_repo && ( method == 'scp' || method == 'send_to_scp' )"
+        type = "number"
+        help.en = "SSH port used for SCP connection."
+        help.fr = "Port SSH utilisé pour la connexion SCP."
+
         # Incremental configuration
 
         [main.general.is_incremental]
@@ -137,16 +145,27 @@ services = []
         help.en = "Alerts are sent to the admins group"
         help.fr = "Les alertes sont envoyés aux membres du groupe admins"
 
-        [main.general.keep]
-        ask.en = "How many backups do you want to keep?"
-        ask.fr = "Combien de sauvegarde souhaitez-vous conserver ?"
-        visible = "method != 'send_to_rclone' && method != 'send_to_drive'"
-        help.en = "Enter `all` to keep all archives for each backup.<br>Enter an integer between `0 and n` to delete old archives if space is needed (`0` can delete everything, `n` will keep at least `n`)"
-        help.fr = "Saisir `all` pour conserver toutes les archives à chaque sauvegarde.<br>Saisir un entier entre `0 et n` pour supprimer les anciennes archives si on a besoin de place (`0` peut tout supprimer, `n` en conservera minimum `n`)"
+        [main.general.min]
+        ask.en = "Minimum backups to keep"
+        ask.fr = "Sauvegardes minimum a conserver"
+        visible = "method != 'send_to_rclone' && method != 'send_to_drive' && method != 'send_to_scp'"
+        help.en = "Enter `all` to disable pruning by free-space check.<br>Enter an integer between `0 and n` to keep at least `n` archives when pruning because of low space."
+        help.fr = "Saisir `all` pour desactiver la purge basee sur l'espace libre.<br>Saisir un entier entre `0 et n` pour conserver au moins `n` archives en cas de manque d'espace."
         type = "string"
         pattern.regexp = '^(all)|([0-9]+)$'
         pattern.error.en = "Value has to be a number or `all`"
-        pattern.error.fr = "La valeur doit être un nombre ou `all`"
+        pattern.error.fr = "La valeur doit etre un nombre ou `all`"
+
+        [main.general.max]
+        ask.en = "Maximum backups to keep"
+        ask.fr = "Sauvegardes maximum a conserver"
+        visible = "method != 'send_to_rclone' && method != 'send_to_drive' && method != 'send_to_scp'"
+        help.en = "Enter `all` to disable limit by count.<br>Enter an integer greater than or equal to `1` to delete older archives when this maximum is exceeded."
+        help.fr = "Saisir `all` pour desactiver la limite par nombre.<br>Saisir un entier superieur ou egal a `1` pour supprimer les archives les plus anciennes lorsque ce maximum est depasse."
+        type = "string"
+        pattern.regexp = '^(all)|([1-9][0-9]*)$'
+        pattern.error.en = "Value has to be an integer >= 1 or `all`"
+        pattern.error.fr = "La valeur doit etre un entier >= 1 ou `all`"
 
         [main.general.debug]
         ask.en = "Debug mode"
