@@ -24,12 +24,14 @@ declare -a APPS=()
 
 # Do before script stufs
 do_before() {
-    nextcloud_set_maintenance_mode on
+    # Inhibit maintenance mode because tar will ignore read-fail
+    # nextcloud_set_maintenance_mode on
 }
 
 # do after script stuf
 do_after() {
-    nextcloud_set_maintenance_mode off
+    # Inhibit maintenance mode because tar will ignore read-fail
+    # nextcloud_set_maintenance_mode off
 }
 
 #=============================================================================#
